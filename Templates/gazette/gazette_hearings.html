@@ -1,0 +1,122 @@
+{% extends 'gazette/base.html' %}
+
+{% block title %}Public Hearings — San Juan City Gazette{% endblock %}
+
+{% block content %}
+
+<div style="background: linear-gradient(135deg, #0d1f3c 0%, #1a3a6b 100%); border-bottom: 1px solid rgba(201,168,76,0.3);" class="py-12 px-6">
+    <div class="max-w-6xl mx-auto">
+        <p class="text-[11px] font-bold uppercase tracking-[0.2em] mb-2" style="color: var(--gold);">Open for Public Participation</p>
+        <h2 class="serif text-white text-4xl font-bold leading-tight mb-3">Public Hearings</h2>
+        <p class="text-white/50 text-base max-w-xl leading-relaxed">
+            Measures currently open for public comment and deliberation before final enactment.
+        </p>
+    </div>
+</div>
+
+<div class="max-w-6xl mx-auto px-6 py-12">
+
+    <!-- Open for comment -->
+    {% if open_docs %}
+    <div class="mb-12">
+        <div class="flex items-center gap-3 mb-6">
+            <span class="w-3 h-3 rounded-full bg-emerald-500 animate-pulse"></span>
+            <h2 class="text-lg font-bold text-slate-900">Open for Public Comment</h2>
+            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold" style="background: #e8faf0; color: #1a7a4a;">
+                {{ open_docs.count }} active
+            </span>
+        </div>
+
+        <div class="space-y-4">
+            {% for doc in open_docs %}
+            <a href="{% url 'gazette_document' doc.id %}#participation"
+                class="block group bg-white rounded-2xl border border-emerald-100 hover:border-emerald-300 hover:shadow-lg transition-all p-6">
+                <div class="flex items-start gap-4">
+                    <div class="w-12 h-12 rounded-xl flex items-center justify-center shrink-0" style="background: #e8faf0;">
+                        <i class="fas fa-comments text-lg" style="color: #1a7a4a;"></i>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-center gap-2 mb-2 flex-wrap">
+                            <span class="text-[10px] font-bold uppercase tracking-widest px-2 py-1 rounded-full"
+                                style="background: {% if doc.doc_type == 'ORDINANCE' %}#e8f0fa{% else %}#f5e9c8{% endif %}; color: {% if doc.doc_type == 'ORDINANCE' %}var(--navy){% else %}#8a6820{% endif %};">
+                                {{ doc.doc_type }}
+                            </span>
+                            {% if doc.reference_no %}
+                            <span class="text-[10px] text-slate-400 font-bold uppercase">{{ doc.reference_no }}</span>
+                            {% endif %}
+                            <span class="ml-auto text-[10px] text-emerald-600 font-bold uppercase tracking-widest">
+                                <i class="fas fa-circle text-[6px] mr-1"></i> Comment open
+                            </span>
+                        </div>
+                        <h3 class="serif font-bold text-slate-900 text-lg leading-snug group-hover:text-indigo-800 transition-colors line-clamp-2 mb-2">
+                            {{ doc.title }}
+                        </h3>
+                        <div class="flex items-center gap-4 text-[11px] text-slate-400 font-medium">
+                            <span><i class="fas fa-user mr-1.5"></i>
+                                {% if doc.author.councilor_profile %}{{ doc.author.councilor_profile.name }}
+                                {% else %}Hon. {{ doc.author.last_name }}{% endif %}
+                            </span>
+                            <span><i class="fas fa-comments mr-1.5"></i>
+                                {{ doc.public_comments.filter.count|default:"0" }} comments
+                            </span>
+                        </div>
+                    </div>
+                    <div class="shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-emerald-300 group-hover:text-emerald-600 group-hover:bg-emerald-50 transition-all">
+                        <i class="fas fa-arrow-right text-xs"></i>
+                    </div>
+                </div>
+            </a>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Upcoming hearings from sessions -->
+    {% if upcoming_sessions %}
+    <div>
+        <h2 class="text-lg font-bold text-slate-900 mb-6">Upcoming Sessions</h2>
+        <div class="space-y-4">
+            {% for session in upcoming_sessions %}
+            <div class="bg-white rounded-2xl border border-slate-100 p-6">
+                <div class="flex items-start gap-4">
+                    <div class="text-center shrink-0 w-14">
+                        <p class="text-2xl font-black" style="color: var(--navy);">{{ session.session_date|date:"d" }}</p>
+                        <p class="text-[10px] font-bold uppercase text-slate-400">{{ session.session_date|date:"M Y" }}</p>
+                    </div>
+                    <div class="w-px self-stretch bg-slate-100 shrink-0"></div>
+                    <div class="flex-1">
+                        <p class="text-sm font-bold text-slate-800 mb-1">
+                            {{ session.session_number }}th Regular Session
+                        </p>
+                        <p class="text-[11px] text-slate-400 font-medium mb-3">
+                            <i class="fas fa-clock mr-1.5"></i>{{ session.session_time|default:"10:00 A.M." }}
+                            &nbsp;·&nbsp;
+                            <i class="fas fa-map-marker-alt mr-1.5"></i>Session Hall, Room 214
+                        </p>
+                        <p class="text-[11px] text-slate-500">
+                            {{ session.agenda_items.count }} item{{ session.agenda_items.count|pluralize }} on the agenda
+                        </p>
+                    </div>
+                    {% if session.agenda_pdf %}
+                    <a href="{{ session.agenda_pdf.url }}" target="_blank"
+                        class="shrink-0 px-4 py-2 rounded-xl text-[10px] font-bold uppercase tracking-widest text-white"
+                        style="background: var(--navy);">
+                        <i class="fas fa-file-pdf mr-1.5"></i> Order of Business
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    {% if not open_docs and not upcoming_sessions %}
+    <div class="text-center py-24">
+        <i class="fas fa-calendar-times text-5xl text-slate-200 mb-4 block"></i>
+        <p class="text-slate-400 font-bold uppercase tracking-widest text-xs">No active hearings at this time</p>
+    </div>
+    {% endif %}
+
+</div>
+{% endblock %}

@@ -1,0 +1,156 @@
+from django.shortcuts import render, get_object_or_404, redirect
+from django.core.paginator import Paginator
+from django.http import HttpResponse
+from django.template.loader import render_to_string
+from django.utils import timezone
+from django.contrib import messages
+from django.db.models import Q
+from .models import Document, Session
+from .models import PublicComment
+ 
+ 
+def gazette_index(request):
+    """Public index of all approved measures."""
+    docs = Document.objects.filter(status='APPROVED').order_by('-updated_at')
+ 
+    # Filters
+    search_query = request.GET.get('search', '').strip()
+    type_filter  = request.GET.get('type', '').strip()
+    year_filter  = request.GET.get('year', '').strip()
+ 
+    if search_query:
+        docs = docs.filter(
+            Q(title__icontains=search_query) |
+            Q(reference_no__icontains=search_query) |
+            Q(content__icontains=search_query)
+        )
+    if type_filter and type_filter != 'ALL':
+        docs = docs.filter(doc_type=type_filter)
+    if year_filter:
+        docs = docs.filter(updated_at__year=year_filter)
+ 
+    # Available years for dropdown
+    from django.db.models.functions import ExtractYear
+    available_years = (
+        Document.objects.filter(status='APPROVED')
+        .annotate(year=ExtractYear('updated_at'))
+        .values_list('year', flat=True)
+        .distinct()
+        .order_by('-year')
+    )
+ 
+    # Paginate
+    paginator = Paginator(docs, 20)
+    page = request.GET.get('page', 1)
+    documents = paginator.get_page(page)
+ 
+    return render(request, 'gazette/gazette_index.html', {
+        'documents':       documents,
+        'search_query':    search_query,
+        'type_filter':     type_filter,
+        'year_filter':     year_filter,
+        'available_years': available_years,
+    })
+ 
+ 
+def gazette_document(request, doc_id):
+    """Individual document page with full text and comments."""
+    doc = get_object_or_404(Document, id=doc_id)
+    comments = PublicComment.objects.filter(document=doc)
+ 
+    # Related documents — same committee or same author, excluding current
+    related = Document.objects.filter(
+        status='APPROVED'
+    ).exclude(id=doc.id).filter(
+        Q(referred_committee=doc.referred_committee) |
+        Q(author=doc.author)
+    ).distinct()[:4]
+ 
+    comment_submitted = request.session.pop('comment_submitted', False)
+ 
+    return render(request, 'gazette/gazette_document.html', {
+        'doc':              doc,
+        'comments':         comments,
+        'related':          related,
+        'comment_submitted': comment_submitted,
+    })
+ 
+ 
+def gazette_submit_comment(request, doc_id):
+    """Handle public comment submission."""
+    doc = get_object_or_404(Document, id=doc_id)
+ 
+    if request.method != 'POST':
+        return redirect('gazette_document', doc_id=doc_id)
+ 
+    if not doc.public_participation:
+        messages.error(request, 'Public comment is closed for this measure.')
+        return redirect('gazette_document', doc_id=doc_id)
+ 
+    name    = request.POST.get('name', '').strip()
+    barangay = request.POST.get('barangay', '').strip()
+    comment = request.POST.get('comment', '').strip()
+ 
+    if not name or not comment:
+        messages.error(request, 'Name and comment are required.')
+        return redirect('gazette_document', doc_id=doc_id)
+ 
+    x_forwarded = request.META.get('HTTP_X_FORWARDED_FOR')
+    ip = x_forwarded.split(',')[0].strip() if x_forwarded else request.META.get('REMOTE_ADDR')
+ 
+    PublicComment.objects.create(
+        document=doc,
+        name=name,
+        barangay=barangay,
+        comment=comment,
+        ip_address=ip,
+        is_approved=False  # pending moderation
+    )
+ 
+    request.session['comment_submitted'] = True
+    return redirect('gazette_document', doc_id=doc_id)
+ 
+ 
+def gazette_download(request, doc_id):
+    """Download document as PDF."""
+    doc = get_object_or_404(Document, id=doc_id, status='APPROVED')
+    html_string = render_to_string('documents/document_pdf.html', {'doc': doc})
+ 
+    try:
+        from xhtml2pdf import pisa
+        import io
+        import re
+ 
+        html_string = re.sub(r'<p[^>]*>\s*<br\s*/?>\s*</p>', '', html_string)
+ 
+        buffer = io.BytesIO()
+        pisa.CreatePDF(html_string, dest=buffer)
+        buffer.seek(0)
+ 
+        filename = f"{doc.doc_type}-{doc.reference_no or doc.id}-{doc.updated_at.year}.pdf"
+        response = HttpResponse(buffer.read(), content_type='application/pdf')
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
+        return response
+ 
+    except ImportError:
+        return HttpResponse('PDF generation unavailable.', status=500)
+ 
+ 
+def gazette_hearings(request):
+    """Public hearings page — open for comment + upcoming sessions."""
+
+ 
+    open_docs = Document.objects.filter(
+        public_participation=True
+    ).exclude(status='APPROVED').order_by('-updated_at')
+ 
+    upcoming_sessions = Session.objects.filter(
+        session_date__gte=timezone.now().date()
+    ).order_by('session_date')[:5]
+ 
+    return render(request, 'gazette/gazette_hearings.html', {
+        'open_docs':         open_docs,
+        'upcoming_sessions': upcoming_sessions,
+    })
+ 
+ 

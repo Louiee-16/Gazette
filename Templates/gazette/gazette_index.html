@@ -1,0 +1,197 @@
+{% extends 'gazette/base.html' %}
+{% load static %}
+
+{% block title %}Legislative Gazette — San Juan City{% endblock %}
+
+{% block content %}
+
+<!-- HERO -->
+<div style="background: linear-gradient(135deg, #0d1f3c 0%, #1a3a6b 100%); border-bottom: 1px solid rgba(201,168,76,0.3);" class="py-16 px-6">
+    <div class="max-w-6xl mx-auto">
+        <p class="text-[11px] font-bold uppercase tracking-[0.2em] mb-3" style="color: var(--gold);">
+            Official Legislative Record
+        </p>
+        <h2 class="serif text-white text-4xl md:text-5xl font-bold leading-tight mb-6 max-w-2xl">
+            Laws & Resolutions of San Juan City
+        </h2>
+        <p class="text-white/50 text-base max-w-xl leading-relaxed mb-8">
+            All enacted ordinances and adopted resolutions of the 8th City Council, available for public reference and transparency.
+        </p>
+
+        <!-- Search -->
+        <form method="GET" action="{% url 'gazette_index' %}" class="flex gap-3 max-w-xl">
+            <div class="relative flex-1">
+                <i class="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-white/30 text-sm"></i>
+                <input type="text" name="search" value="{{ search_query }}"
+                    placeholder="Search ordinances, resolutions, keywords..."
+                    class="w-full pl-11 pr-4 py-3 rounded-xl text-white text-sm outline-none"
+                    style="background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.15); backdrop-filter: blur(4px);">
+            </div>
+            <button type="submit"
+                class="px-6 py-3 rounded-xl font-bold text-sm text-white transition-all"
+                style="background: var(--gold); color: var(--navy);">
+                Search
+            </button>
+        </form>
+    </div>
+</div>
+
+<!-- FILTERS + STATS -->
+<div style="background: white; border-bottom: 1px solid #e8e4da;" class="sticky top-0 z-10 py-4 px-6">
+    <div class="max-w-6xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
+
+        <!-- Type filters -->
+        <div class="flex items-center gap-2">
+            <a href="{% url 'gazette_index' %}{% if search_query %}?search={{ search_query }}{% endif %}"
+                class="px-4 py-2 rounded-full text-[11px] font-bold uppercase tracking-widest transition-all
+                {% if not type_filter or type_filter == 'ALL' %}text-white{% else %}text-slate-500 hover:text-slate-800{% endif %}"
+                style="{% if not type_filter or type_filter == 'ALL' %}background: var(--navy);{% else %}background: #f1ede6;{% endif %}">
+                All
+            </a>
+            <a href="{% url 'gazette_index' %}?type=ORDINANCE{% if search_query %}&search={{ search_query }}{% endif %}"
+                class="px-4 py-2 rounded-full text-[11px] font-bold uppercase tracking-widest transition-all
+                {% if type_filter == 'ORDINANCE' %}text-white{% else %}text-slate-500 hover:text-slate-800{% endif %}"
+                style="{% if type_filter == 'ORDINANCE' %}background: var(--navy);{% else %}background: #f1ede6;{% endif %}">
+                Ordinances
+            </a>
+            <a href="{% url 'gazette_index' %}?type=RESOLUTION{% if search_query %}&search={{ search_query }}{% endif %}"
+                class="px-4 py-2 rounded-full text-[11px] font-bold uppercase tracking-widest transition-all
+                {% if type_filter == 'RESOLUTION' %}text-white{% else %}text-slate-500 hover:text-slate-800{% endif %}"
+                style="{% if type_filter == 'RESOLUTION' %}background: var(--navy);{% else %}background: #f1ede6;{% endif %}">
+                Resolutions
+            </a>
+        </div>
+
+        <!-- Year filter + count -->
+        <div class="flex items-center gap-4">
+            <form method="GET" action="{% url 'gazette_index' %}">
+                {% if search_query %}<input type="hidden" name="search" value="{{ search_query }}">{% endif %}
+                {% if type_filter %}<input type="hidden" name="type" value="{{ type_filter }}">{% endif %}
+                <select name="year" onchange="this.form.submit()"
+                    class="text-[11px] font-bold uppercase tracking-widest px-3 py-2 rounded-lg outline-none border border-slate-200 bg-white text-slate-600">
+                    <option value="">All Years</option>
+                    {% for y in available_years %}
+                    <option value="{{ y }}" {% if year_filter == y|stringformat:"s" %}selected{% endif %}>{{ y }}</option>
+                    {% endfor %}
+                </select>
+            </form>
+            <p class="text-[11px] text-slate-400 font-bold uppercase tracking-widest whitespace-nowrap">
+                {{ documents.count }} record{{ documents.count|pluralize }}
+            </p>
+        </div>
+    </div>
+</div>
+
+<!-- DOCUMENT LIST -->
+<div class="max-w-6xl mx-auto px-6 py-12">
+
+    {% if search_query %}
+    <p class="text-sm text-slate-500 mb-6 font-medium">
+        Search results for <span class="font-bold text-slate-800">"{{ search_query }}"</span> — {{ documents.count }} found
+    </p>
+    {% endif %}
+
+    <div class="space-y-4">
+        {% for doc in documents %}
+        <a href="{% url 'gazette_document' doc.id %}"
+            class="block group bg-white rounded-2xl border border-slate-100 hover:border-slate-300 hover:shadow-lg transition-all duration-200 overflow-hidden">
+            <div class="flex items-start gap-6 p-6">
+
+                <!-- Type badge -->
+                <div class="shrink-0 mt-1">
+                    <div class="w-12 h-12 rounded-xl flex items-center justify-center"
+                        style="background: {% if doc.doc_type == 'ORDINANCE' %}#e8f0fa{% else %}#f5e9c8{% endif %};">
+                        <i class="fas {% if doc.doc_type == 'ORDINANCE' %}fa-scroll{% else %}fa-file-circle-check{% endif %} text-lg"
+                            style="color: {% if doc.doc_type == 'ORDINANCE' %}var(--navy){% else %}#a07830{% endif %};"></i>
+                    </div>
+                </div>
+
+                <!-- Content -->
+                <div class="flex-1 min-w-0">
+                    <div class="flex items-center gap-3 mb-2 flex-wrap">
+                        <span class="text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-full"
+                            style="background: {% if doc.doc_type == 'ORDINANCE' %}#e8f0fa{% else %}#f5e9c8{% endif %}; color: {% if doc.doc_type == 'ORDINANCE' %}var(--navy){% else %}#8a6820{% endif %};">
+                            {{ doc.doc_type }}
+                        </span>
+                        {% if doc.reference_no %}
+                        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                            {{ doc.reference_no }}
+                        </span>
+                        {% endif %}
+                        <span class="text-[10px] text-slate-300 font-medium">
+                            Series of {{ doc.updated_at|date:"Y" }}
+                        </span>
+                    </div>
+
+                    <h3 class="serif text-slate-900 font-bold text-lg leading-snug group-hover:text-indigo-800 transition-colors line-clamp-2 mb-3">
+                        {{ doc.title }}
+                    </h3>
+
+                    <div class="flex items-center gap-4 text-[11px] text-slate-400 font-medium flex-wrap">
+                        <span>
+                            <i class="fas fa-user mr-1.5"></i>
+                            {% if doc.author.councilor_profile %}{{ doc.author.councilor_profile.name }}
+                            {% else %}Hon. {{ doc.author.last_name }}{% endif %}
+                        </span>
+                        {% if doc.referred_committee %}
+                        <span>
+                            <i class="fas fa-users mr-1.5"></i>
+                            Committee on {{ doc.referred_committee.name }}
+                        </span>
+                        {% endif %}
+                        <span>
+                            <i class="fas fa-calendar mr-1.5"></i>
+                            {{ doc.updated_at|date:"F d, Y" }}
+                        </span>
+                        {% if doc.public_participation_open %}
+                        <span class="px-2 py-0.5 rounded-full text-[10px] font-bold" style="background: #e8faf0; color: #1a7a4a;">
+                            <i class="fas fa-comments mr-1"></i> Public comment open
+                        </span>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Arrow -->
+                <div class="shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-slate-200 group-hover:text-slate-500 group-hover:bg-slate-100 transition-all">
+                    <i class="fas fa-arrow-right text-xs"></i>
+                </div>
+            </div>
+        </a>
+        {% empty %}
+        <div class="text-center py-24">
+            <div class="w-16 h-16 rounded-2xl mx-auto mb-4 flex items-center justify-center" style="background: #f1ede6;">
+                <i class="fas fa-search text-2xl text-slate-300"></i>
+            </div>
+            <p class="text-slate-400 font-bold uppercase tracking-widest text-xs">No records found</p>
+            {% if search_query %}
+            <a href="{% url 'gazette_index' %}" class="text-indigo-600 text-sm font-medium mt-2 inline-block hover:underline">Clear search</a>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Pagination -->
+    {% if documents.has_other_pages %}
+    <div class="flex justify-center gap-2 mt-10">
+        {% if documents.has_previous %}
+        <a href="?page={{ documents.previous_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if type_filter %}&type={{ type_filter }}{% endif %}"
+            class="px-4 py-2 rounded-xl text-sm font-bold text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 transition-all">
+            ← Previous
+        </a>
+        {% endif %}
+
+        <span class="px-4 py-2 rounded-xl text-sm font-bold text-white"
+            style="background: var(--navy);">
+            {{ documents.number }} of {{ documents.paginator.num_pages }}
+        </span>
+
+        {% if documents.has_next %}
+        <a href="?page={{ documents.next_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if type_filter %}&type={{ type_filter }}{% endif %}"
+            class="px-4 py-2 rounded-xl text-sm font-bold text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 transition-all">
+            Next →
+        </a>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

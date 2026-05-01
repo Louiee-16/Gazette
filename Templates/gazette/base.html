@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}San Juan City Legislative Gazette{% endblock %}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,600;0,700;0,800;1,400&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --navy: #0d1f3c;
+            --gold: #c9a84c;
+            --gold-light: #f5e9c8;
+            --cream: #faf8f4;
+        }
+        body {
+            font-family: 'DM Sans', sans-serif;
+            background-color: var(--cream);
+            color: #1a1a1a;
+        }
+        .serif { font-family: 'EB Garamond', Georgia, serif; }
+        .nav-link {
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            color: #555;
+            transition: color 0.2s;
+        }
+        .nav-link:hover { color: var(--navy); }
+        .nav-link.active { color: var(--navy); border-bottom: 2px solid var(--gold); padding-bottom: 2px; }
+    </style>
+    {% block extra_head %}{% endblock %}
+</head>
+<body class="min-h-screen flex flex-col">
+
+    <!-- TOP BAR -->
+    <div style="background: var(--navy);" class="py-2 px-6">
+        <div class="max-w-6xl mx-auto flex justify-between items-center">
+            <p class="text-[10px] font-medium text-white/40 uppercase tracking-widest">
+                Republic of the Philippines — City of San Juan, Metro Manila
+            </p>
+            <p class="text-[10px] font-medium text-white/40 uppercase tracking-widest">
+                Office of the Sangguniang Panlungsod
+            </p>
+        </div>
+    </div>
+
+    <!-- MAIN HEADER -->
+    <header style="background: var(--navy); border-bottom: 3px solid var(--gold);" class="py-6 px-6">
+        <div class="max-w-6xl mx-auto flex flex-col md:flex-row justify-between items-center gap-6">
+            <!-- Logo + Title -->
+            <a href="{% url 'gazette_index' %}" class="flex items-center gap-5">
+                <div style="width:56px; height:56px; background: var(--gold); border-radius: 50%; display:flex; align-items:center; justify-content:center;">
+                    <i class="fas fa-landmark text-white text-xl"></i>
+                </div>
+                <div>
+                    <h1 class="serif text-white text-2xl font-bold tracking-tight leading-tight">
+                        San Juan City Legislative Gazette
+                    </h1>
+                    <p class="text-white/50 text-[11px] uppercase tracking-widest font-medium mt-0.5">
+                        Official Public Record of Legislative Measures
+                    </p>
+                </div>
+            </a>
+
+            <!-- Nav -->
+            <nav class="flex items-center gap-8">
+                <a href="{% url 'gazette_index' %}" class="nav-link {% if request.resolver_match.url_name == 'gazette_index' %}active{% endif %}" style="color: rgba(255,255,255,0.6);">
+                    Ordinances
+                </a>
+                <a href="{% url 'gazette_index' %}?type=RESOLUTION" class="nav-link" style="color: rgba(255,255,255,0.6);">
+                    Resolutions
+                </a>
+                <a href="{% url 'gazette_hearings' %}" class="nav-link {% if request.resolver_match.url_name == 'gazette_hearings' %}active{% endif %}" style="color: rgba(255,255,255,0.6);">
+                    Public Hearings
+                </a>
+                <a href="{% url 'gazette_index' %}?search=" class="nav-link" style="color: rgba(255,255,255,0.6);">
+                    Search
+                </a>
+            </nav>
+        </div>
+    </header>
+
+    <!-- MAIN CONTENT -->
+    <main class="flex-1">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- FOOTER -->
+    <footer style="background: var(--navy); border-top: 3px solid var(--gold);" class="py-10 px-6 mt-16">
+        <div class="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div>
+                <h4 class="serif text-white text-lg font-bold mb-3">San Juan City Gazette</h4>
+                <p class="text-white/40 text-sm leading-relaxed">
+                    Official public record of all enacted ordinances and adopted resolutions of the Sangguniang Panlungsod of San Juan City.
+                </p>
+            </div>
+            <div>
+                <h4 class="text-white/60 text-[10px] font-bold uppercase tracking-widest mb-3">Quick Links</h4>
+                <ul class="space-y-2">
+                    <li><a href="{% url 'gazette_index' %}" class="text-white/40 text-sm hover:text-white transition-colors">All Ordinances</a></li>
+                    <li><a href="{% url 'gazette_index' %}?type=RESOLUTION" class="text-white/40 text-sm hover:text-white transition-colors">All Resolutions</a></li>
+                    <li><a href="{% url 'gazette_hearings' %}" class="text-white/40 text-sm hover:text-white transition-colors">Public Hearings</a></li>
+                </ul>
+            </div>
+            <div>
+                <h4 class="text-white/60 text-[10px] font-bold uppercase tracking-widest mb-3">Contact</h4>
+                <p class="text-white/40 text-sm leading-relaxed">
+                    Office of the Sangguniang Panlungsod<br>
+                    City of San Juan, Metro Manila<br>
+                    Room 214, San Juan Government Center
+                </p>
+            </div>
+        </div>
+        <div class="max-w-6xl mx-auto mt-8 pt-6 border-t border-white/10 text-center">
+            <p class="text-white/20 text-xs">
+                © {% now "Y" %} City Government of San Juan, Metro Manila. All rights reserved.
+            </p>
+        </div>
+    </footer>
+
+</body>
+</html>
