@@ -1,0 +1,471 @@
+{% extends 'gazette/base.html' %}
+{% load static %}
+{% load custom_filters %}
+{% block title %}{{ doc.title|truncatechars:60 }} — San Juan City Gazette{% endblock %}
+
+{% block extra_head %}
+<link href="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.snow.css" rel="stylesheet">
+<style>
+    /* Document Layout Styles */
+    .doc-body.ql-editor p, .doc-body.ql-editor li { font-size: 14px; margin-bottom: 8px; }
+    .doc-body.ql-editor strong { font-weight: 700; }
+    .doc-body.ql-editor ol, .doc-body.ql-editor ul { padding-left: 2em; }
+    
+    /* YouTube Style Comment Input Interaction */
+    .comment-input-line {
+        position: relative;
+        border-bottom: 2px solid #e2e8f0;
+        transition: all 0.3s ease;
+    }
+    .comment-input-line:focus-within {
+        border-bottom-color: #0f172a;
+    }
+
+    /* Vote Button Styles */
+    .vote-active-up { color: #059669 !important; }
+    .vote-active-down { color: #e11d48 !important; }
+
+    @media print {
+        aside, nav, .no-print, #participation, .download-bar { display: none !important; }
+        .bg-white { border: none !important; box-shadow: none !important; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- BREADCRUMB -->
+<div style="background: white; border-bottom: 1px solid #e8e4da;" class="py-4 px-6 no-print">
+    <div class="max-w-6xl mx-auto">
+        <nav class="flex items-center gap-2 text-[11px] font-bold uppercase tracking-widest text-slate-400">
+            <a href="{% url 'gazette_index' %}" class="hover:text-slate-700 transition-colors">Gazette</a>
+            <span>/</span>
+            <span>{{ doc.doc_type|title }}</span>
+            <span>/</span>
+            <span class="text-slate-600">{{ doc.reference_no|default:doc.id }}</span>
+        </nav>
+    </div>
+</div>
+
+<div class="max-w-6xl mx-auto px-6 py-12">
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-10 items-start">
+
+        <!-- LEFT: DOCUMENT -->
+        <div class="lg:col-span-8">
+
+            <!-- Document meta header -->
+            <div class="mb-8">
+                <div class="flex items-center gap-3 mb-4 flex-wrap">
+                    <span class="text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 rounded-full"
+                        style="background: {% if doc.doc_type == 'ORDINANCE' %}#e8f0fa{% else %}#f5e9c8{% endif %}; color: {% if doc.doc_type == 'ORDINANCE' %}var(--navy){% else %}#8a6820{% endif %};">
+                        {{ doc.doc_type }}
+                    </span>
+                    {% if doc.reference_no %}
+                    <span class="text-[11px] font-bold text-slate-400 uppercase tracking-widest">{{ doc.reference_no }}</span>
+                    {% endif %}
+                    <span class="text-[11px] text-slate-300">Series of {{ doc.updated_at|date:"Y" }}</span>
+                </div>
+
+                <h1 class="serif text-3xl font-bold text-slate-900 leading-tight mb-4">{{ doc.title }}</h1>
+
+                <div class="flex flex-wrap gap-4 text-sm text-slate-500 font-medium">
+                    <span><i class="fas fa-user mr-1.5 text-slate-300"></i>
+                        {% if doc.author.councilor_profile %}{{ doc.author.councilor_profile.name }}
+                        {% else %}Hon. {{ doc.author.last_name }}{% endif %}
+                    </span>
+                    {% if doc.referred_committee %}
+                    <span><i class="fas fa-users mr-1.5 text-slate-300"></i>Committee on {{ doc.referred_committee.name }}</span>
+                    {% endif %}
+                    <span><i class="fas fa-calendar mr-1.5 text-slate-300"></i>{{ doc.updated_at|date:"F d, Y" }}</span>
+                </div>
+            </div>
+
+            <!-- Download bar 
+            <div class="download-bar flex items-center gap-3 mb-8 p-4 rounded-2xl border border-slate-100 bg-white shadow-sm">
+                <i class="fas fa-file-pdf text-rose-400 text-lg"></i>
+                <div class="flex-1">
+                    <p class="text-xs font-bold text-slate-700">Official Document PDF</p>
+                    <p class="text-[10px] text-slate-400">{{ doc.doc_type|title }} No. {{ doc.reference_no|default:doc.id }}</p>
+                </div>
+                <a href="{% url 'gazette_download' doc.id %}"
+                    class="px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-widest text-white transition-all hover:opacity-90"
+                    style="background: var(--navy);">
+                    <i class="fas fa-download mr-1.5"></i> Download
+                </a>
+            </div>
+-->
+            <!-- THE OFFICIAL PAPER DOCUMENT -->
+            <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden mb-12">
+                <div class="px-12 py-12" style="font-family: 'EB Garamond', Georgia, serif;">
+                    <div class="text-center mb-8">
+                        <p class="text-[11px] text-slate-500 uppercase tracking-tighter">Republic of the Philippines</p>
+                        <p class="text-[14px] font-bold text-slate-700 uppercase">City of San Juan, Metro Manila</p>
+                        <p class="text-[11px] text-slate-500">Office of the Sangguniang Panlungsod</p>
+                    </div>
+
+                    <div class="border-t border-b border-slate-300 py-4 text-center mb-10">
+                        <p class="text-[14px] font-black uppercase tracking-wide text-slate-900">
+                            {{ doc.doc_type }} No. {{ doc.reference_no|default:doc.id }}
+                        </p>
+                        <p class="text-[11px] text-slate-500 mt-1">Series of {{ doc.updated_at|date:"Y" }}</p>
+                    </div>
+
+                    <div class="ql-editor doc-body" style="position: static; white-space: normal; padding: 0; font-size: 15px; line-height: 1.8; color: #1a1a1a;">
+                        {{ doc.content|safe }}
+                    </div>
+                </div>
+            </div>
+
+            <!-- ── YOUTUBE STYLE COMMENT SECTION ────────────────── -->
+            <div id="participation" class="mt-16 no-print">
+                <div class="flex items-center gap-4 mb-10">
+                    <h2 class="text-xl font-bold text-slate-900 tracking-tight">
+                        {{ comments.count }} Comment{{ comments.count|pluralize }}
+                    </h2>
+                </div>
+
+                {% if doc.public_participation %}
+                <!-- Comment Form (YouTube Style) -->
+                <div class="flex gap-4 mb-12">
+                    <div class="w-10 h-10 rounded-full bg-slate-200 flex items-center justify-center text-slate-500 font-bold shrink-0">
+                        <i class="fas fa-user"></i>
+                    </div>
+                    <div class="flex-1">
+                        <form method="POST" action="{% url 'gazette_submit_comment' doc.id %}" class="space-y-4">
+                            {% csrf_token %}
+                            <div class="comment-input-line" >
+                                <textarea name="comment" required placeholder="Add a public comment..."
+                                    class="w-full py-1 bg-transparent border-none outline-none text-[14px] text-slate-800 placeholder-slate-500 resize-none min-h-[30px] focus:ring-0"></textarea>
+                            </div>
+                            
+                            <div class="flex flex-wrap items-center justify-between gap-4">
+                                <div id="infos" class="flex gap-3 flex-1 max-w-md hidden">
+                                    <input type="text" name="name" required placeholder="Your Full Name"
+                                        class="bg-slate-50 border-none text-[12px] rounded-lg focus:ring-1 focus:ring-slate-300 py-1.5 px-3 flex-1">
+                                    <input type="text" name="barangay" placeholder="Barangay (Optional)"
+                                        class="bg-slate-50 border-none text-[12px] rounded-lg focus:ring-1 focus:ring-slate-300 py-1.5 px-3 flex-1">
+                                    <input type="text" name="Emaik" placeholder="Email"
+                                        class="required bg-slate-50 border-none text-[12px] rounded-lg focus:ring-1 focus:ring-slate-300 py-1.5 px-3 flex-1">
+                                    
+                                </div>
+                                <div id="commentButtons" class="hidden flex gap-2">
+                                    <button type="reset" class="px-4 py-2 text-[11px] font-bold text-slate-500 hover:bg-slate-100 rounded-full transition-all uppercase tracking-widest">Cancel</button>
+                                    <button type="submit" class="px-5 py-2 text-[11px] font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-full transition-all uppercase tracking-widest shadow-sm">Comment</button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Comments Feed -->
+                <div class="space-y-8">
+                    {% for comment in comments %}
+                        <div class="flex gap-4 group mb-8">
+                            <!-- User Avatar Circle -->
+                            <div class="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold shrink-0 text-white bg-slate-500">
+                                {{ comment.name|slice:":1"|upper }}
+                            </div>
+                            
+                            <div class="flex-1">
+                                <!-- Comment Meta -->
+                                <div class="flex items-center gap-2 mb-1">
+                                    <span class="text-[13px] font-bold text-slate-900">{{ comment.name|mask_name }}</span>
+                                    <span class="text-[12px] text-slate-400">{{ comment.created_at|timesince }} ago</span>
+                                </div>
+                                
+                                <!-- Comment Text -->
+                                <p class="text-[14px] text-slate-700 leading-relaxed mb-2">
+                                    {{ comment.comment }}
+                                </p>
+
+                                <!-- Action Bar -->
+                                <div class="flex items-center gap-1">
+                                    <button class="vote-up p-2 hover:bg-slate-100 rounded-full text-slate-600 transition-all">
+                                        <i class="far fa-thumbs-up text-sm"></i>
+                                    </button>
+                                    <span class="text-[12px] text-slate-500 font-medium ml-1">0</span>
+
+                                    <button class="vote-down p-2 hover:bg-slate-100 rounded-full text-slate-600 transition-all">
+                                        <i class="far fa-thumbs-down text-sm"></i>
+                                    </button>
+
+                                    <!-- Corrected Reply Button -->
+                                    <button class="ml-4 text-[12px] font-bold text-slate-700 hover:bg-slate-100 px-3 py-1.5 rounded-full transition-all"
+                                            onclick="toggleReplyForm('{{ comment.id }}')">
+                                        Reply
+                                    </button>
+                                </div>
+                                
+                                <!-- HIDDEN REPLY FORM (YouTube Style) -->
+                                <div id="reply-form-{{ comment.id }}" class="hidden mt-4">
+                                    <form method="POST" action="{% url 'gazette_submit_comment' doc.id %}">
+                                        {% csrf_token %}
+                                        <!-- This hidden field tells your backend which comment is the parent -->
+                                        <input type="hidden" name="parent_id" value="{{ comment.id }}">
+                                        
+                                        <div class="comment-input-line mb-3">
+                                            <textarea name="comment" required placeholder="Add a reply..."
+                                                class="w-full py-1 bg-transparent border-none outline-none text-[14px] text-slate-800 placeholder-slate-500 resize-none min-h-[30px] focus:ring-0"></textarea>
+                                        </div>
+
+                                        <!-- Fields for guest info (if not logged in) -->
+                                        <div class="flex items-center justify-between gap-4">
+                                            <div class="flex gap-2">
+                                                <input type="text" name="name" required placeholder="Your Name" class="bg-slate-50 border-none text-[12px] rounded-lg py-1 px-3 w-32">
+                                            </div>
+                                            <div class="flex gap-2">
+                                                <button type="button" onclick="toggleReplyForm('{{ comment.id }}')" 
+                                                        class="px-4 py-2 text-[11px] font-bold text-slate-500 hover:bg-slate-100 rounded-full uppercase tracking-widest">
+                                                    Cancel
+                                                </button>
+                                                <button type="submit" class="px-5 py-2 text-[11px] font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-full uppercase tracking-widest">
+                                                    Reply
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </form>
+                                </div>
+                                {%if comment.replies.count > 0%}
+                                    <button class="button-replies ml-4 text-[15px] font-bold text-slate-700 hover:bg-slate-100 py-1.5 rounded-full transition-all" data-id = "{{comment.id}}">
+                                        {{comment.replies.count}} Replies
+                                    </button>
+                                {%endif%}
+                            <!--START HERE OF REPLIES-->
+                                
+                                <div id ="replies-{{comment.id}}"class=" hidden flex flex-col gap-4 group mb-8">
+                                    {%for comment in comment.replies.all%}
+                                    <!-- User Avatar Circle -->
+                                     
+                                    <div class="w-7 h-7 rounded-full flex items-center justify-center text-sm font-bold shrink-0 text-white bg-slate-500">
+                                        {{ comment.name|slice:":1"|upper }}
+                                    </div>
+                                    
+                                    <div class="flex-1">
+                                        <!-- Comment Meta -->
+                                        <div class="flex items-center gap-2 mb-1">
+                                            <span class="text-[13px] font-bold text-slate-900">@{{ comment.name|slugify }}</span>
+                                            <span class="text-[12px] text-slate-400">{{ comment.created_at|timesince }} ago</span>
+                                        </div>
+                                        
+                                        <!-- Comment Text -->
+                                        <p class="text-[14px] text-slate-700 leading-relaxed mb-2">
+                                            {{ comment.comment }}
+                                        </p>
+
+                                        <!-- Action Bar -->
+                                        <div class="flex items-center gap-1">
+                                            <button class="vote-up p-2 hover:bg-slate-100 rounded-full text-slate-600 transition-all">
+                                                <i class="far fa-thumbs-up text-sm"></i>
+                                            </button>
+                                            <span class="text-[12px] text-slate-500 font-medium ml-1">0</span>
+
+                                            <button class="vote-down p-2 hover:bg-slate-100 rounded-full text-slate-600 transition-all">
+                                                <i class="far fa-thumbs-down text-sm"></i>
+                                            </button>
+
+                                            <!-- Corrected Reply Button -->
+                                            <button class="ml-4 text-[12px] font-bold text-slate-700 hover:bg-slate-100 px-3 py-1.5 rounded-full transition-all"
+                                                    onclick="toggleReplyForm('{{ comment.id }}')">
+                                                Reply
+                                            </button>
+                                        </div>
+                                        
+                                        <!-- HIDDEN REPLY FORM (YouTube Style) -->
+                                        <div id="reply-form-{{ comment.id }}" class="hidden mt-4">
+                                            <form method="POST" action="{% url 'gazette_submit_comment' doc.id %}">
+                                                {% csrf_token %}
+                                                <!-- This hidden field tells your backend which comment is the parent -->
+                                                <input type="hidden" name="parent_id" value="{{ comment.id }}">
+                                                
+                                                <div class="comment-input-line mb-3">
+                                                    <textarea name="comment" required placeholder="Add a reply..."
+                                                        class="w-full py-1 bg-transparent border-none outline-none text-[14px] text-slate-800 placeholder-slate-500 resize-none min-h-[30px] focus:ring-0"></textarea>
+                                                </div>
+
+                                                <!-- Fields for guest info (if not logged in) -->
+                                                <div class="flex items-center justify-between gap-4">
+                                                    <div class="flex gap-2">
+                                                        <input type="text" name="name" required placeholder="Your Name" class="bg-slate-50 border-none text-[12px] rounded-lg py-1 px-3 w-32">
+                                                    </div>
+                                                    <div class="flex gap-2">
+                                                        <button type="button" onclick="toggleReplyForm('{{ comment.id }}')" 
+                                                                class="px-4 py-2 text-[11px] font-bold text-slate-500 hover:bg-slate-100 rounded-full uppercase tracking-widest">
+                                                            Cancel
+                                                        </button>
+                                                        <button type="submit" class="px-5 py-2 text-[11px] font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-full uppercase tracking-widest">
+                                                            Reply
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </form>
+                                        </div>
+                                    </div>
+                                    {%endfor%}
+                                </div>
+                               
+                            </div>
+                        </div>
+
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- RIGHT SIDEBAR -->
+        <aside class="lg:col-span-4 space-y-6 sticky top-24 no-print">
+
+            <!-- Sentiment Bar 
+            <div class="bg-white rounded-2xl border border-slate-100 p-6 shadow-sm">
+                <h3 class="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-4">Public Sentiment</h3>
+                <div class="space-y-4">
+                    <div class="flex items-center justify-between text-xs font-bold mb-1">
+                        <span class="text-slate-600">Total Support</span>
+                        <span class="text-emerald-600">85%</span>
+                    </div>
+                    <div class="w-full h-2 bg-slate-100 rounded-full overflow-hidden flex">
+                        <div class="bg-emerald-500 h-full" style="width: 85%"></div>
+                        <div class="bg-rose-400 h-full" style="width: 15%"></div>
+                    </div>
+                    <div class="flex justify-between text-[10px] font-bold uppercase text-slate-400 tracking-tight">
+                        <span>{{ total_agrees|default:"12" }} Agreements</span>
+                        <span>{{ total_disagrees|default:"2" }} Opposed</span>
+                    </div>
+                </div>
+            </div>
+        -->
+            <!-- Status Card -->
+            <div class="bg-white rounded-2xl border border-slate-100 p-6 shadow-sm">
+                <h3 class="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-4">Official Status</h3>
+                <span class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-[11px] font-bold"
+                    style="background: #e8faf0; color: #1a7a4a;">
+                    <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> Open for Public Comment
+                </span>
+                <div class="mt-4 pt-4 border-t border-slate-50 space-y-3 text-[11px]">
+                    <div class="flex justify-between">
+                        <span class="text-slate-400 font-medium">Reference No.</span>
+                        <span class="font-bold text-slate-700">{{ doc.reference_no|default:doc.id }}</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-slate-400 font-medium">Date Released</span>
+                        <span class="font-bold text-slate-700">{{ doc.updated_at|date:"M d, Y" }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <!--<div class="bg-white rounded-2xl border border-slate-100 p-6 space-y-3 shadow-sm">
+                <h3 class="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-4">Tools</h3>
+                <a href="{% url 'gazette_download' doc.id %}"
+                    class="flex items-center justify-center gap-3 px-4 py-3 rounded-xl text-xs font-bold text-white transition-all w-full hover:opacity-90"
+                    style="background: var(--navy);">
+                    <i class="fas fa-download"></i> DOWNLOAD PDF
+                </a>
+                <button onclick="window.print()"
+                    class="flex items-center justify-center gap-3 px-4 py-3 rounded-xl text-xs font-bold text-slate-600 bg-slate-50 border border-slate-200 hover:bg-slate-100 transition-all w-full uppercase tracking-widest">
+                    <i class="fas fa-print"></i> Print Document
+                </button>
+            </div>
+
+            <!-- Related Measures -->
+            {% if related %}
+            <div class="bg-white rounded-2xl border border-slate-100 p-6 shadow-sm">
+                <h3 class="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-4">Related Measures</h3>
+                <div class="space-y-4">
+                    {% for r in related %}
+                    <a href="{% url 'gazette_document' r.id %}" class="block group">
+                        <p class="text-[9px] font-bold uppercase tracking-widest mb-1 group-hover:text-indigo-600 transition-colors"
+                            style="color: {% if r.doc_type == 'ORDINANCE' %}var(--navy){% else %}#8a6820{% endif %};">
+                            {{ r.doc_type }} — {{ r.reference_no|default:r.id }}
+                        </p>
+                        <p class="text-xs text-slate-600 leading-snug font-medium line-clamp-2 italic">{{ r.title }}</p>
+                    </a>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+        </aside>
+    </div>
+</div>
+
+
+
+
+<!-- Interaction Script for Like/Dislike Toggle -->
+<script>
+
+//FOR REPLIES
+document.querySelectorAll('.button-replies').forEach(button => {
+    button.addEventListener('click', () => {
+        const id = button.dataset.id;
+        const replies = document.getElementById(`replies-${id}`);
+
+        if (replies) {
+            replies.classList.toggle('hidden');
+        }
+    });
+});
+////////////////////////////////////////////////////////////
+document.querySelector(".comment-input-line").addEventListener("click", showComment);//COMMENTING
+function showComment() {
+    document.getElementById("commentButtons").classList.remove("hidden");
+    document.getElementById("infos").classList.remove("hidden");
+}
+
+//////////////////////////////////////////////////
+document.querySelector('button[type="reset"]').addEventListener('click', () =>{
+    const commentBox = document.getElementById('commentButtons');
+    commentBox.classList.add('hidden');
+    document.getElementById('infos').classList.add('hidden');
+})
+
+function toggleReplyForm(commentId) {
+    const formId = 'reply-form-' + commentId;
+    const formElement = document.getElementById(formId);
+    
+    if (formElement) {
+       
+        if (formElement.classList.contains('hidden')) {
+            
+            document.querySelectorAll('[id^="reply-form-"]').forEach(el => el.classList.add('hidden'));
+            
+            formElement.classList.remove('hidden');
+            formElement.querySelector('textarea').focus();
+        } else {
+            formElement.classList.add('hidden');
+        }
+    }
+}
+    document.querySelectorAll('.vote-up').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const icon = this.querySelector('i');
+            const downIcon = this.closest('div.flex').querySelector('.vote-down i');
+            
+            icon.classList.toggle('fas');
+            icon.classList.toggle('far');
+            this.classList.toggle('vote-active-up');
+            
+
+            downIcon.classList.replace('fas', 'far');
+            downIcon.parentElement.classList.remove('vote-active-down');
+        });
+    });
+
+    document.querySelectorAll('.vote-down').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const icon = this.querySelector('i');
+            const upIcon = this.closest('div.flex').querySelector('.vote-up i');
+            
+            icon.classList.toggle('fas');
+            icon.classList.toggle('far');
+            this.classList.toggle('vote-active-down');
+            
+            // Un-toggle like if clicking dislike
+            upIcon.classList.replace('fas', 'far');
+            upIcon.parentElement.classList.remove('vote-active-up');
+        });
+    });
+</script>
+
+{% endblock %}

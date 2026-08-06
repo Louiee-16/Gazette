@@ -57,6 +57,7 @@ class Session(models.Model):
 
 
 class PublicComment(models.Model):
+
     document   = models.ForeignKey(Document, on_delete=models.CASCADE)
     name       = models.CharField(max_length=200)
     barangay   = models.CharField(max_length=100, blank=True)
@@ -64,3 +65,10 @@ class PublicComment(models.Model):
     is_approved = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     ip_address = models.GenericIPAddressField(null=True, blank=True)
+    tag = models.CharField(max_length=10, default='comment')
+    replyTo = models.ForeignKey('self', default=None, on_delete=models.CASCADE, null=True,blank=True, related_name="replies")
+
+    class Meta:
+        db_table = 'gazette_publiccomment'
+
+

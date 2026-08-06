@@ -25,7 +25,7 @@ SECRET_KEY = 'django-insecure-9x(!qcym_e6_vgr6%=s@_5o_1=6&jvacp+m4_=dknpil@df!7w
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*']
 
 
 # Application definition
@@ -137,3 +137,7 @@ TEMPLATES = [
         },
     },
 ]
+
+
+CSRF_COOKIE_NAME = "csrftoken_gazette"
+SESSION_COOKIE_NAME = "sessionid_gazette"

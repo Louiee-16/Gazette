@@ -7,7 +7,7 @@ from django.contrib import messages
 from django.db.models import Q
 from .models import Document, Session
 from .models import PublicComment
- 
+
  
 def gazette_index(request):
     """Public index of all approved measures."""
@@ -53,10 +53,11 @@ def gazette_index(request):
     })
  
  
-def gazette_document(request, doc_id):
+def public_participation_document(request, doc_id):
     """Individual document page with full text and comments."""
     doc = get_object_or_404(Document, id=doc_id)
-    comments = PublicComment.objects.filter(document=doc)
+    comments = PublicComment.objects.filter(document=doc, tag = "comment")
+    replies = PublicComment.objects.filter(document= doc.id, tag="reply")
  
     # Related documents — same committee or same author, excluding current
     related = Document.objects.filter(
@@ -68,14 +69,41 @@ def gazette_document(request, doc_id):
  
     comment_submitted = request.session.pop('comment_submitted', False)
  
-    return render(request, 'gazette/gazette_document.html', {
-        'doc':              doc,
-        'comments':         comments,
-        'related':          related,
+    return render(request, 'Documents/PPdocument.html', {
+        'doc':doc,
+        'comments':comments,
+        'related':related,
         'comment_submitted': comment_submitted,
+        'replies': replies,
     })
  
  
+def gazette_document(request, doc_id):
+    """Individual document page with full text and comments."""
+    doc = get_object_or_404(Document, id=doc_id)
+    comments = PublicComment.objects.filter(document=doc, tag = "comment")
+    replies = PublicComment.objects.filter(document= doc.id, tag="reply")
+ 
+    # Related documents — same committee or same author, excluding current
+    related = Document.objects.filter(
+        status='APPROVED'
+    ).exclude(id=doc.id).filter(
+        Q(referred_committee=doc.referred_committee) |
+        Q(author=doc.author)
+    ).distinct()[:4]
+ 
+    comment_submitted = request.session.pop('comment_submitted', False)
+ 
+    return render(request, 'Documents/gazette_document.html', {
+        'doc':doc,
+        'comments':comments,
+        'related':related,
+        'comment_submitted': comment_submitted,
+        'replies': replies,
+    })
+
+
+
 def gazette_submit_comment(request, doc_id):
     """Handle public comment submission."""
     doc = get_object_or_404(Document, id=doc_id)
@@ -93,22 +121,30 @@ def gazette_submit_comment(request, doc_id):
  
     if not name or not comment:
         messages.error(request, 'Name and comment are required.')
-        return redirect('gazette_document', doc_id=doc_id)
+        return redirect('public-participation-document', doc_id=doc_id)
  
     x_forwarded = request.META.get('HTTP_X_FORWARDED_FOR')
     ip = x_forwarded.split(',')[0].strip() if x_forwarded else request.META.get('REMOTE_ADDR')
- 
+    parent_id = request.POST.get('parent_id')
+    parent = None
+
+    if (parent_id):
+        tag = "reply"
+        parent = PublicComment.objects.get(id = parent_id)
     PublicComment.objects.create(
         document=doc,
         name=name,
         barangay=barangay,
         comment=comment,
         ip_address=ip,
-        is_approved=False  # pending moderation
+        is_approved=False,
+        tag = "reply" if parent_id else "comment",
+        replyTo = parent if parent_id else None
+
     )
  
     request.session['comment_submitted'] = True
-    return redirect('gazette_document', doc_id=doc_id)
+    return redirect('public-participation-document', doc_id=doc_id)
  
  
 def gazette_download(request, doc_id):
@@ -137,12 +173,9 @@ def gazette_download(request, doc_id):
  
  
 def gazette_hearings(request):
-    """Public hearings page — open for comment + upcoming sessions."""
 
- 
     open_docs = Document.objects.filter(
-        public_participation=True
-    ).exclude(status='APPROVED').order_by('-updated_at')
+        public_participation=True, status='REFERRED').order_by('-updated_at')
  
     upcoming_sessions = Session.objects.filter(
         session_date__gte=timezone.now().date()
