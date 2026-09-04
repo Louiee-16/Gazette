@@ -31,13 +31,64 @@ class Document(models.Model):
     public_participation = models.BooleanField(default=False)
     referred_committee = models.ForeignKey('councilors.Committee', on_delete=models.DO_NOTHING, db_column='referred_committee_id')
 
+    is_legacy = False
+
     class Meta:
-        managed = False            
-        db_table = 'documents_document' 
+        managed = False
+        db_table = 'documents_document'
 
     def __str__(self):
         return self.title
 
+    @property
+    def display_year(self):
+        return self.updated_at.year
+
+    def get_absolute_url(self):
+        from django.urls import reverse
+        return reverse('gazette_document', args=[self.id])
+
+
+class LegacyDocument(models.Model):
+    """
+    SHADOW MODEL: Matches the 'documents_legacydocument' table in LePMITS.
+    Already-passed bills (pre-system or scanned) uploaded directly by staff.
+    No status/workflow field — every row is a permanent, public record.
+    """
+    title = models.TextField()
+    reference_no = models.CharField(max_length=100)
+    doc_type = models.CharField(max_length=20)
+    year = models.IntegerField(null=True, blank=True)
+    pdf_file = models.CharField(max_length=255)
+    extracted_text = models.TextField(blank=True)
+    ocr_processed = models.BooleanField(default=False)
+    uploaded_at = models.DateTimeField()
+
+    is_legacy = True
+
+    class Meta:
+        managed = False
+        db_table = 'documents_legacydocument'
+
+    def __str__(self):
+        return self.title
+
+    @property
+    def updated_at(self):
+        return self.uploaded_at
+
+    @property
+    def display_year(self):
+        return self.year or self.uploaded_at.year
+
+    @property
+    def pdf_url(self):
+        from django.conf import settings
+        return f"{settings.LEPMITS_MEDIA_BASE_URL.rstrip('/')}/{self.pdf_file.lstrip('/')}"
+
+    def get_absolute_url(self):
+        from django.urls import reverse
+        return reverse('gazette_legacy_document', args=[self.id])
 
 
 class Session(models.Model):

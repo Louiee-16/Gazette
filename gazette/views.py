@@ -1,3 +1,5 @@
+from itertools import chain
+
 from django.shortcuts import render, get_object_or_404, redirect
 from django.core.paginator import Paginator
 from django.http import HttpResponse
@@ -5,42 +7,58 @@ from django.template.loader import render_to_string
 from django.utils import timezone
 from django.contrib import messages
 from django.db.models import Q
-from .models import Document, Session
+from django.db.models.functions import ExtractYear
+from .models import Document, LegacyDocument, Session
 from .models import PublicComment
 
  
 def gazette_index(request):
-    """Public index of all approved measures."""
-    docs = Document.objects.filter(status='APPROVED').order_by('-updated_at')
- 
+    """Public index of all approved measures, plus archived legacy bills."""
+    docs = Document.objects.filter(status='APPROVED')
+    legacy_docs = LegacyDocument.objects.all()
+
     # Filters
     search_query = request.GET.get('search', '').strip()
     type_filter  = request.GET.get('type', '').strip()
     year_filter  = request.GET.get('year', '').strip()
- 
+
     if search_query:
         docs = docs.filter(
             Q(title__icontains=search_query) |
             Q(reference_no__icontains=search_query) |
             Q(content__icontains=search_query)
         )
+        legacy_docs = legacy_docs.filter(
+            Q(title__icontains=search_query) |
+            Q(reference_no__icontains=search_query) |
+            Q(extracted_text__icontains=search_query)
+        )
     if type_filter and type_filter != 'ALL':
         docs = docs.filter(doc_type=type_filter)
+        legacy_docs = legacy_docs.filter(doc_type=type_filter)
     if year_filter:
         docs = docs.filter(updated_at__year=year_filter)
- 
-    # Available years for dropdown
-    from django.db.models.functions import ExtractYear
-    available_years = (
+        legacy_docs = legacy_docs.filter(year=year_filter)
+
+    # Available years for dropdown, across both sources
+    doc_years = set(
         Document.objects.filter(status='APPROVED')
         .annotate(year=ExtractYear('updated_at'))
         .values_list('year', flat=True)
         .distinct()
-        .order_by('-year')
     )
- 
+    legacy_years = set(
+        LegacyDocument.objects.exclude(year__isnull=True)
+        .values_list('year', flat=True)
+        .distinct()
+    )
+    available_years = sorted(doc_years | legacy_years, reverse=True)
+
+    # Merge and sort in Python since the two sources don't share a schema
+    combined = sorted(chain(docs, legacy_docs), key=lambda d: d.updated_at, reverse=True)
+
     # Paginate
-    paginator = Paginator(docs, 20)
+    paginator = Paginator(combined, 20)
     page = request.GET.get('page', 1)
     documents = paginator.get_page(page)
  
@@ -102,6 +120,18 @@ def gazette_document(request, doc_id):
         'replies': replies,
     })
 
+
+
+def gazette_legacy_document(request, doc_id):
+    """Detail page for an archived legacy bill (pre-system or scanned copy)."""
+    doc = get_object_or_404(LegacyDocument, id=doc_id)
+
+    related = LegacyDocument.objects.filter(doc_type=doc.doc_type).exclude(id=doc.id)[:4]
+
+    return render(request, 'Documents/legacy_document.html', {
+        'doc': doc,
+        'related': related,
+    })
 
 
 def gazette_submit_comment(request, doc_id):

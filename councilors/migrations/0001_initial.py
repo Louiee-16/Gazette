@@ -34,7 +34,7 @@ class Migration(migrations.Migration):
                 ('is_active', models.BooleanField(default=True, help_text='Uncheck if they are no longer in office')),
             ],
             options={
-                'db_table': 'councilors_councilors',
+                'db_table': 'councilors_councilor',
                 'managed': False,
             },
         ),

@@ -37,6 +37,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django.contrib.humanize',
     'gazette',
     'councilors',
 ]
@@ -141,3 +142,8 @@ TEMPLATES = [
 
 CSRF_COOKIE_NAME = "csrftoken_gazette"
 SESSION_COOKIE_NAME = "sessionid_gazette"
+
+# LePMITS serves legacy-document PDFs from its own media storage; this app
+# only has DB access to LePMITS, not its filesystem, so links are built
+# against LePMITS's own host.
+LEPMITS_MEDIA_BASE_URL = 'http://127.0.0.1:1624/media/'

@@ -93,7 +93,7 @@
 
     <div class="space-y-4">
         {% for doc in documents %}
-        <a href="{% url 'gazette_document' doc.id %}"
+        <a href="{{ doc.get_absolute_url }}"
             class="block group bg-white rounded-2xl border border-slate-100 hover:border-slate-300 hover:shadow-lg transition-all duration-200 overflow-hidden">
             <div class="flex items-start gap-6 p-6">
 
@@ -119,8 +119,13 @@
                         </span>
                         {% endif %}
                         <span class="text-[10px] text-slate-300 font-medium">
-                            Series of {{ doc.updated_at|date:"Y" }}
+                            Series of {{ doc.display_year }}
                         </span>
+                        {% if doc.is_legacy %}
+                        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                            <i class="fas fa-archive mr-1"></i> Archived Record
+                        </span>
+                        {% endif %}
                     </div>
 
                     <h3 class="serif text-slate-900 font-bold text-lg leading-snug group-hover:text-indigo-800 transition-colors line-clamp-2 mb-3">
@@ -128,11 +133,13 @@
                     </h3>
 
                     <div class="flex items-center gap-4 text-[11px] text-slate-400 font-medium flex-wrap">
+                        {% if not doc.is_legacy %}
                         <span>
                             <i class="fas fa-user mr-1.5"></i>
                             {% if doc.author.councilor_profile %}{{ doc.author.councilor_profile.name }}
                             {% else %}Hon. {{ doc.author.last_name }}{% endif %}
                         </span>
+                        {% endif %}
                         {% if doc.referred_committee %}
                         <span>
                             <i class="fas fa-users mr-1.5"></i>

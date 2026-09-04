@@ -1,4 +1,5 @@
 {% extends 'gazette/base.html' %}
+{% load humanize %}
 
 {% block title %}Public Hearings — San Juan City Gazette{% endblock %}
 
@@ -86,15 +87,12 @@
                     <div class="w-px self-stretch bg-slate-100 shrink-0"></div>
                     <div class="flex-1">
                         <p class="text-sm font-bold text-slate-800 mb-1">
-                            {{ session.session_number }}th Regular Session
+                            {{ session.session_number|ordinal }} Regular Session
                         </p>
                         <p class="text-[11px] text-slate-400 font-medium mb-3">
                             <i class="fas fa-clock mr-1.5"></i>{{ session.session_time|default:"10:00 A.M." }}
                             &nbsp;·&nbsp;
                             <i class="fas fa-map-marker-alt mr-1.5"></i>Session Hall, Room 214
-                        </p>
-                        <p class="text-[11px] text-slate-500">
-                            {{ session.agenda_items.count }} item{{ session.agenda_items.count|pluralize }} on the agenda
                         </p>
                     </div>
                     {% if session.agenda_pdf %}

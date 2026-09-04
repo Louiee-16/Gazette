@@ -4,6 +4,7 @@ from . import views
 urlpatterns = [
     path('',views.gazette_index,name='gazette_index'),
     path('document/<int:doc_id>/',views.gazette_document,name='gazette_document'),
+    path('legacy/<int:doc_id>/',views.gazette_legacy_document,name='gazette_legacy_document'),
     path('PPdocument/<int:doc_id>/',views.public_participation_document,name='public-participation-document'),
 
     path('document/<int:doc_id>/download/',views.gazette_download,name='gazette_download'),
