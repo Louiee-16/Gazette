@@ -58,7 +58,7 @@
                                 {% else %}Hon. {{ doc.author.last_name }}{% endif %}
                             </span>
                             <span><i class="fas fa-comments mr-1.5"></i>
-                                {{ doc.public_comments.filter.count|default:"0" }} comments
+                                {{ doc.public_comments.count }} comments
                             </span>
                         </div>
                     </div>

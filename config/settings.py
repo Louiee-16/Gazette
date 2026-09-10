@@ -10,22 +10,46 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
+import os
 from pathlib import Path
+
+from django.core.exceptions import ImproperlyConfigured
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+
+def _load_dotenv(path):
+    """Minimal .env loader (no python-dotenv dependency). Existing
+    environment variables always win; only fills in what's missing."""
+    if not path.exists():
+        return
+    for line in path.read_text().splitlines():
+        line = line.strip()
+        if not line or line.startswith('#') or '=' not in line:
+            continue
+        key, _, value = line.partition('=')
+        os.environ.setdefault(key.strip(), value.strip())
+
+
+_load_dotenv(BASE_DIR / '.env')
 
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-9x(!qcym_e6_vgr6%=s@_5o_1=6&jvacp+m4_=dknpil@df!7w'
+# Falls back to the original dev-only key so local runs keep working even
+# without a .env file. Set DJANGO_SECRET_KEY for anything beyond local dev.
+SECRET_KEY = os.environ.get(
+    'DJANGO_SECRET_KEY',
+    'django-insecure-9x(!qcym_e6_vgr6%=s@_5o_1=6&jvacp+m4_=dknpil@df!7w',
+)
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.environ.get('DJANGO_DEBUG', 'True') == 'True'
 
-ALLOWED_HOSTS = ['*']
+ALLOWED_HOSTS = os.environ.get('DJANGO_ALLOWED_HOSTS', '*').split(',')
 
 
 # Application definition
@@ -75,14 +99,24 @@ WSGI_APPLICATION = 'config.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
 
+try:
+    _db_password = os.environ['DB_PASSWORD']
+except KeyError:
+    raise ImproperlyConfigured(
+        'DB_PASSWORD environment variable is not set. Copy .env.example to '
+        '.env and fill in the real value, or export DB_PASSWORD in your shell. '
+        'This is intentionally not defaulted, since the previous hardcoded '
+        'value is compromised (committed in git history).'
+    )
+
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'Final_LePMITS',
-        'USER':'gazette',
-        'PASSWORD':'09469729948',
-        'HOST':'localhost',
-        'PORT':'5432',
+        'NAME': os.environ.get('DB_NAME', 'Final_LePMITS'),
+        'USER': os.environ.get('DB_USER', 'gazette'),
+        'PASSWORD': _db_password,
+        'HOST': os.environ.get('DB_HOST', 'localhost'),
+        'PORT': os.environ.get('DB_PORT', '5432'),
     }
 }
 

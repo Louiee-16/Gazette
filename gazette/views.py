@@ -1,6 +1,7 @@
 from itertools import chain
 
 from django.shortcuts import render, get_object_or_404, redirect
+from django.urls import reverse
 from django.core.paginator import Paginator
 from django.http import HttpResponse
 from django.template.loader import render_to_string
@@ -36,7 +37,7 @@ def gazette_index(request):
     if type_filter and type_filter != 'ALL':
         docs = docs.filter(doc_type=type_filter)
         legacy_docs = legacy_docs.filter(doc_type=type_filter)
-    if year_filter:
+    if year_filter and year_filter.isdigit():
         docs = docs.filter(updated_at__year=year_filter)
         legacy_docs = legacy_docs.filter(year=year_filter)
 
@@ -74,9 +75,9 @@ def gazette_index(request):
 def public_participation_document(request, doc_id):
     """Individual document page with full text and comments."""
     doc = get_object_or_404(Document, id=doc_id)
-    comments = PublicComment.objects.filter(document=doc, tag = "comment")
-    replies = PublicComment.objects.filter(document= doc.id, tag="reply")
- 
+    comments = PublicComment.objects.filter(document=doc, tag="comment", is_approved=True)
+    replies = PublicComment.objects.filter(document=doc.id, tag="reply", is_approved=True)
+
     # Related documents — same committee or same author, excluding current
     related = Document.objects.filter(
         status='APPROVED'
@@ -84,9 +85,9 @@ def public_participation_document(request, doc_id):
         Q(referred_committee=doc.referred_committee) |
         Q(author=doc.author)
     ).distinct()[:4]
- 
-    comment_submitted = request.session.pop('comment_submitted', False)
- 
+
+    comment_submitted = request.GET.get('submitted') == '1'
+
     return render(request, 'Documents/PPdocument.html', {
         'doc':doc,
         'comments':comments,
@@ -99,9 +100,9 @@ def public_participation_document(request, doc_id):
 def gazette_document(request, doc_id):
     """Individual document page with full text and comments."""
     doc = get_object_or_404(Document, id=doc_id)
-    comments = PublicComment.objects.filter(document=doc, tag = "comment")
-    replies = PublicComment.objects.filter(document= doc.id, tag="reply")
- 
+    comments = PublicComment.objects.filter(document=doc, tag="comment", is_approved=True)
+    replies = PublicComment.objects.filter(document=doc.id, tag="reply", is_approved=True)
+
     # Related documents — same committee or same author, excluding current
     related = Document.objects.filter(
         status='APPROVED'
@@ -109,9 +110,9 @@ def gazette_document(request, doc_id):
         Q(referred_committee=doc.referred_committee) |
         Q(author=doc.author)
     ).distinct()[:4]
- 
-    comment_submitted = request.session.pop('comment_submitted', False)
- 
+
+    comment_submitted = request.GET.get('submitted') == '1'
+
     return render(request, 'Documents/gazette_document.html', {
         'doc':doc,
         'comments':comments,
@@ -153,14 +154,14 @@ def gazette_submit_comment(request, doc_id):
         messages.error(request, 'Name and comment are required.')
         return redirect('public-participation-document', doc_id=doc_id)
  
-    x_forwarded = request.META.get('HTTP_X_FORWARDED_FOR')
-    ip = x_forwarded.split(',')[0].strip() if x_forwarded else request.META.get('REMOTE_ADDR')
+    # Not behind a confirmed trusted reverse proxy, so X-Forwarded-For is
+    # client-spoofable — only REMOTE_ADDR is trustworthy here.
+    ip = request.META.get('REMOTE_ADDR')
     parent_id = request.POST.get('parent_id')
     parent = None
 
-    if (parent_id):
-        tag = "reply"
-        parent = PublicComment.objects.get(id = parent_id)
+    if parent_id:
+        parent = get_object_or_404(PublicComment, id=parent_id, document=doc)
     PublicComment.objects.create(
         document=doc,
         name=name,
@@ -173,8 +174,7 @@ def gazette_submit_comment(request, doc_id):
 
     )
  
-    request.session['comment_submitted'] = True
-    return redirect('public-participation-document', doc_id=doc_id)
+    return redirect(f"{reverse('public-participation-document', args=[doc_id])}?submitted=1#participation")
  
  
 def gazette_download(request, doc_id):

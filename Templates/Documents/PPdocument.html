@@ -144,8 +144,8 @@
                                         class="bg-slate-50 border-none text-[12px] rounded-lg focus:ring-1 focus:ring-slate-300 py-1.5 px-3 flex-1">
                                     <input type="text" name="barangay" placeholder="Barangay (Optional)"
                                         class="bg-slate-50 border-none text-[12px] rounded-lg focus:ring-1 focus:ring-slate-300 py-1.5 px-3 flex-1">
-                                    <input type="text" name="Emaik" placeholder="Email"
-                                        class="required bg-slate-50 border-none text-[12px] rounded-lg focus:ring-1 focus:ring-slate-300 py-1.5 px-3 flex-1">
+                                    <input type="text" name="email" placeholder="Email (optional)"
+                                        class="bg-slate-50 border-none text-[12px] rounded-lg focus:ring-1 focus:ring-slate-300 py-1.5 px-3 flex-1">
                                     
                                 </div>
                                 <div id="commentButtons" class="hidden flex gap-2">
@@ -226,15 +226,15 @@
                                         </div>
                                     </form>
                                 </div>
-                                {%if comment.replies.count > 0%}
+                                {%if comment.approved_replies.count > 0%}
                                     <button class="button-replies ml-4 text-[15px] font-bold text-slate-700 hover:bg-slate-100 py-1.5 rounded-full transition-all" data-id = "{{comment.id}}">
-                                        {{comment.replies.count}} Replies
+                                        {{comment.approved_replies.count}} Replies
                                     </button>
                                 {%endif%}
                             <!--START HERE OF REPLIES-->
-                                
+
                                 <div id ="replies-{{comment.id}}"class=" hidden flex flex-col gap-4 group mb-8">
-                                    {%for comment in comment.replies.all%}
+                                    {%for comment in comment.approved_replies%}
                                     <!-- User Avatar Circle -->
                                      
                                     <div class="w-7 h-7 rounded-full flex items-center justify-center text-sm font-bold shrink-0 text-white bg-slate-500">
@@ -244,7 +244,7 @@
                                     <div class="flex-1">
                                         <!-- Comment Meta -->
                                         <div class="flex items-center gap-2 mb-1">
-                                            <span class="text-[13px] font-bold text-slate-900">@{{ comment.name|slugify }}</span>
+                                            <span class="text-[13px] font-bold text-slate-900">{{ comment.name|mask_name }}</span>
                                             <span class="text-[12px] text-slate-400">{{ comment.created_at|timesince }} ago</span>
                                         </div>
                                         

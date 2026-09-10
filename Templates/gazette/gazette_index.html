@@ -76,7 +76,7 @@
                 </select>
             </form>
             <p class="text-[11px] text-slate-400 font-bold uppercase tracking-widest whitespace-nowrap">
-                {{ documents.count }} record{{ documents.count|pluralize }}
+                {{ documents.paginator.count }} record{{ documents.paginator.count|pluralize }}
             </p>
         </div>
     </div>
@@ -87,7 +87,7 @@
 
     {% if search_query %}
     <p class="text-sm text-slate-500 mb-6 font-medium">
-        Search results for <span class="font-bold text-slate-800">"{{ search_query }}"</span> — {{ documents.count }} found
+        Search results for <span class="font-bold text-slate-800">"{{ search_query }}"</span> — {{ documents.paginator.count }} found
     </p>
     {% endif %}
 

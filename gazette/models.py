@@ -3,14 +3,18 @@ from django.db import models
 
 
 class Users(models.Model):
+    first_name = models.CharField(max_length=150, blank=True)
+    last_name = models.CharField(max_length=150, blank=True)
     role = models.CharField(max_length=20, default='STAFF')
     office_or_district = models.CharField(max_length=100, blank=True) # e.g. "District 1" or "Brgy. San Jose"
+
     def get_councilor_name(self):
+        from django.core.exceptions import ObjectDoesNotExist
         try:
             return self.councilor_profile.name
-        except:
-            return self.username
-        
+        except ObjectDoesNotExist:
+            return f"{self.first_name} {self.last_name}".strip()
+
     class Meta:
         managed = False
         db_table = 'accounts_user'
@@ -109,7 +113,7 @@ class Session(models.Model):
 
 class PublicComment(models.Model):
 
-    document   = models.ForeignKey(Document, on_delete=models.CASCADE)
+    document   = models.ForeignKey(Document, on_delete=models.CASCADE, related_name='public_comments')
     name       = models.CharField(max_length=200)
     barangay   = models.CharField(max_length=100, blank=True)
     comment    = models.TextField()
@@ -118,6 +122,9 @@ class PublicComment(models.Model):
     ip_address = models.GenericIPAddressField(null=True, blank=True)
     tag = models.CharField(max_length=10, default='comment')
     replyTo = models.ForeignKey('self', default=None, on_delete=models.CASCADE, null=True,blank=True, related_name="replies")
+
+    def approved_replies(self):
+        return self.replies.filter(is_approved=True)
 
     class Meta:
         db_table = 'gazette_publiccomment'
