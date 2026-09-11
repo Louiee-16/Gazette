@@ -7,10 +7,25 @@
 <link href="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.snow.css" rel="stylesheet">
 <style>
     /* Document Layout Styles */
-    .doc-body.ql-editor p, .doc-body.ql-editor li { font-size: 14px; margin-bottom: 8px; }
+    /* No !important on line-height: paragraphs carry their own inline
+       line-height (author/conversion-set, deliberately kept by LePMITS's
+       sanitizer) and should render as authored. This is only a fallback
+       for the rare paragraph with no inline value at all. */
+    .doc-body.ql-editor p, .doc-body.ql-editor li { font-size: 14px; margin-bottom: 8px; line-height: 1.4; text-align: justify; }
     .doc-body.ql-editor strong { font-weight: 700; }
     .doc-body.ql-editor ol, .doc-body.ql-editor ul { padding-left: 2em; }
-    
+    .doc-body.ql-editor table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 0 0 1rem;
+    }
+    .doc-body.ql-editor td, .doc-body.ql-editor th {
+        border: 1px solid #e2e8f0;
+        padding: 0.6rem 0.85rem;
+        text-align: left;
+        vertical-align: top;
+    }
+
     /* YouTube Style Comment Input Interaction */
     .comment-input-line {
         position: relative;
@@ -85,7 +100,7 @@
                 <i class="fas fa-file-pdf text-rose-400 text-lg"></i>
                 <div class="flex-1">
                     <p class="text-xs font-bold text-slate-700">Official Document PDF</p>
-                    <p class="text-[10px] text-slate-400">{{ doc.doc_type|title }} No. {{ doc.reference_no|default:doc.id }}</p>
+                    <p class="text-[10px] text-slate-400">{% if doc.reference_no %}{{ doc.reference_no }}{% else %}{{ doc.doc_type|title }} No. {{ doc.id }}{% endif %}</p>
                 </div>
                 <a href="{% url 'gazette_download' doc.id %}"
                     class="px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-widest text-white transition-all hover:opacity-90"
@@ -105,14 +120,20 @@
 
                     <div class="border-t border-b border-slate-300 py-4 text-center mb-10">
                         <p class="text-[14px] font-black uppercase tracking-wide text-slate-900">
-                            {{ doc.doc_type }} No. {{ doc.reference_no|default:doc.id }}
+                            {% if doc.reference_no %}{{ doc.reference_no }}{% else %}{{ doc.doc_type }} No. {{ doc.id }}{% endif %}
                         </p>
                         <p class="text-[11px] text-slate-500 mt-1">Series of {{ doc.updated_at|date:"Y" }}</p>
                     </div>
 
+                    {% if doc.approved_pdf %}
+                    <iframe src="{{ doc.approved_pdf_url }}#zoom=page-width"
+                        style="width:100%; height:80vh; border:none; display:block;"
+                        class="rounded-xl border border-slate-100"></iframe>
+                    {% else %}
                     <div class="ql-editor doc-body" style="position: static; white-space: normal; padding: 0; font-size: 15px; line-height: 1.8; color: #1a1a1a;">
                         {{ doc.content|safe }}
                     </div>
+                    {% endif %}
                 </div>
             </div>
 

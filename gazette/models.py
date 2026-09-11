@@ -35,6 +35,12 @@ class Document(models.Model):
     public_participation = models.BooleanField(default=False)
     referred_committee = models.ForeignKey('councilors.Committee', on_delete=models.DO_NOTHING, db_column='referred_committee_id')
 
+    # LePMITS's own LibreOffice-rendered PDF for this document, captured at
+    # Third Reading (or as a fallback at approval) — see approved_pdf_url.
+    # Not populated for documents approved before this field existed, so
+    # templates must fall back to rendering `content` when this is empty.
+    approved_pdf = models.CharField(max_length=255, blank=True, null=True)
+
     is_legacy = False
 
     class Meta:
@@ -47,6 +53,13 @@ class Document(models.Model):
     @property
     def display_year(self):
         return self.updated_at.year
+
+    @property
+    def approved_pdf_url(self):
+        if not self.approved_pdf:
+            return None
+        from django.conf import settings
+        return f"{settings.LEPMITS_MEDIA_BASE_URL.rstrip('/')}/{self.approved_pdf.lstrip('/')}"
 
     def get_absolute_url(self):
         from django.urls import reverse

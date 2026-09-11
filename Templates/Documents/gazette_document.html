@@ -7,15 +7,31 @@
 <link href="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.snow.css" rel="stylesheet">
 <style>
     /* Document Layout Styles */
-    .doc-body.ql-editor p, .doc-body.ql-editor li { 
-        font-size: 16px; 
-        margin-bottom: 1.2rem; 
+    /* No !important on line-height: paragraphs carry their own inline
+       line-height (author/conversion-set, deliberately kept by LePMITS's
+       sanitizer) and should render as authored. This is only a fallback
+       for the rare paragraph with no inline value at all. */
+    .doc-body.ql-editor p, .doc-body.ql-editor li {
+        font-size: 16px;
+        margin-bottom: 0.5rem;
         color: #1a1a1a;
-        line-height: 1.8;
+        line-height: 1.4;
+        text-align: justify;
     }
     .doc-body.ql-editor strong { font-weight: 700; }
     .doc-body.ql-editor ol, .doc-body.ql-editor ul { padding-left: 2em; margin-bottom: 1.5rem; }
-    
+    .doc-body.ql-editor table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 0 0 1.5rem;
+    }
+    .doc-body.ql-editor td, .doc-body.ql-editor th {
+        border: 1px solid #e2e8f0;
+        padding: 0.75rem 1rem;
+        text-align: left;
+        vertical-align: top;
+    }
+
     /* Paper Effect */
     .official-paper {
         background: white;
@@ -72,7 +88,7 @@
                 style="background: {% if doc.doc_type == 'ORDINANCE' %}#e8f0fa{% else %}#f5e9c8{% endif %}; color: {% if doc.doc_type == 'ORDINANCE' %}var(--navy){% else %}#8a6820{% endif %};">
                 {{ doc.doc_type }}
             </span>
-            <span class="text-[11px] font-bold text-slate-400 uppercase tracking-widest">No. {{ doc.reference_no|default:doc.id }}</span>
+            <span class="text-[11px] font-bold text-slate-400 uppercase tracking-widest">{% if doc.reference_no %}{{ doc.reference_no }}{% else %}No. {{ doc.id }}{% endif %}</span>
         </div>
         <h1 class="serif text-3xl md:text-4xl font-bold text-slate-900 leading-tight mb-6">
             {{ doc.title }}
@@ -125,15 +141,21 @@
             <!-- Ordinance Identification -->
             <div class="text-center mb-12">
                 <p class="text-[14px] font-black uppercase tracking-widest text-slate-900">
-                    {{ doc.doc_type }} No. {{ doc.reference_no|default:doc.id }}
+                    {% if doc.reference_no %}{{ doc.reference_no }}{% else %}{{ doc.doc_type }} No. {{ doc.id }}{% endif %}
                 </p>
                 <p class="text-[11px] text-slate-500 mt-1 uppercase">Series of {{ doc.updated_at|date:"Y" }}</p>
             </div>
 
             <!-- Main Content -->
+            {% if doc.approved_pdf %}
+            <iframe src="{{ doc.approved_pdf_url }}#zoom=page-width"
+                style="width:100%; height:80vh; border:none; display:block;"
+                class="rounded-xl border border-slate-100"></iframe>
+            {% else %}
             <div class="ql-editor doc-body" style="position: static; white-space: normal; padding: 0;">
                 {{ doc.content|safe }}
             </div>
+            {% endif %}
 
             <!-- Footer / Sponsor signature area style -->
             <div class="mt-16 pt-8 border-t border-slate-100 italic text-[13px] text-slate-400 text-center">
