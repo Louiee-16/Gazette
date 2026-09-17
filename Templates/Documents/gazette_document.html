@@ -74,7 +74,7 @@
             <span>/</span>
             <span>{{ doc.doc_type|title }}</span>
             <span>/</span>
-            <span class="text-slate-600">{{ doc.reference_no|default:doc.id }}</span>
+            <span class="text-slate-600">{{ doc.reference_no|default:doc.source_id }}</span>
         </nav>
     </div>
 </div>
@@ -88,7 +88,7 @@
                 style="background: {% if doc.doc_type == 'ORDINANCE' %}#e8f0fa{% else %}#f5e9c8{% endif %}; color: {% if doc.doc_type == 'ORDINANCE' %}var(--navy){% else %}#8a6820{% endif %};">
                 {{ doc.doc_type }}
             </span>
-            <span class="text-[11px] font-bold text-slate-400 uppercase tracking-widest">{% if doc.reference_no %}{{ doc.reference_no }}{% else %}No. {{ doc.id }}{% endif %}</span>
+            <span class="text-[11px] font-bold text-slate-400 uppercase tracking-widest">{% if doc.reference_no %}{{ doc.reference_no }}{% else %}No. {{ doc.source_id }}{% endif %}</span>
         </div>
         <h1 class="serif text-3xl md:text-4xl font-bold text-slate-900 leading-tight mb-6 text-justify">
             {{ doc.title }}
@@ -96,8 +96,7 @@
         
         <div class="flex items-center justify-center flex-wrap gap-6 text-[12px] text-slate-500 font-bold uppercase tracking-widest">
             <span><i class="fas fa-user mr-2 text-slate-300"></i>
-                {% if doc.author.councilor_profile %}{{ doc.author.councilor_profile.name }}
-                {% else %}Hon. {{ doc.author.last_name }}{% endif %}
+                {% if doc.author_name %}{{ doc.author_name }}{% else %}Author not available{% endif %}
             </span>
             <span><i class="fas fa-calendar-check mr-2 text-slate-300"></i>{{ doc.updated_at|date:"F d, Y" }}</span>
         </div>
@@ -116,7 +115,7 @@
             <button onclick="window.print()" class="px-4 py-2 rounded-xl text-[10px] font-bold uppercase tracking-widest text-slate-600 border border-slate-200 hover:bg-slate-50 transition-all">
                 Print
             </button>
-            <a href="{% url 'gazette_download' doc.id %}"
+            <a href="{% url 'gazette_download' doc.source_id %}"
                 class="px-5 py-2 rounded-xl text-[10px] font-bold uppercase tracking-widest text-white transition-all shadow-md shadow-indigo-100"
                 style="background: var(--navy);">
                 Download PDF
@@ -158,9 +157,9 @@
         <h3 class="text-[11px] font-bold uppercase tracking-[0.2em] text-slate-400 mb-6 text-center">Related Measures</h3>
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
             {% for r in related %}
-            <a href="{% url 'gazette_document' r.id %}" class="bg-white p-6 rounded-2xl border border-slate-100 hover:shadow-lg transition-all group">
+            <a href="{% url 'gazette_document' r.source_id %}" class="bg-white p-6 rounded-2xl border border-slate-100 hover:shadow-lg transition-all group">
                 <p class="text-[9px] font-bold uppercase tracking-widest mb-2" style="color: var(--navy);">
-                    {{ r.doc_type }} {{ r.reference_no|default:r.id }}
+                    {{ r.doc_type }} {{ r.reference_no|default:r.source_id }}
                 </p>
                 <p class="text-[13px] text-slate-600 leading-snug font-medium line-clamp-2 group-hover:text-slate-900">{{ r.title }}</p>
             </a>

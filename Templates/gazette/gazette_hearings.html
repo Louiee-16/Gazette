@@ -30,7 +30,7 @@
 
         <div class="space-y-4">
             {% for doc in open_docs %}
-            <a href="{% url 'public-participation-document' doc.id %}#participation"
+            <a href="{% url 'public-participation-document' doc.source_id %}#participation"
                 class="block group bg-white rounded-2xl border border-emerald-100 hover:border-emerald-300 hover:shadow-lg transition-all p-6">
                 <div class="flex items-start gap-4">
                     <div class="w-12 h-12 rounded-xl flex items-center justify-center shrink-0" style="background: #e8faf0;">
@@ -54,8 +54,7 @@
                         </h3>
                         <div class="flex items-center gap-4 text-[11px] text-slate-400 font-medium">
                             <span><i class="fas fa-user mr-1.5"></i>
-                                {% if doc.author.councilor_profile %}{{ doc.author.councilor_profile.name }}
-                                {% else %}Hon. {{ doc.author.last_name }}{% endif %}
+                                {% if doc.author_name %}{{ doc.author_name }}{% else %}Author not available{% endif %}
                             </span>
                             <span><i class="fas fa-comments mr-1.5"></i>
                                 {{ doc.public_comments.count }} comments

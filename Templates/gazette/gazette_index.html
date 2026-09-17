@@ -133,24 +133,23 @@
                     </h3>
 
                     <div class="flex items-center gap-4 text-[11px] text-slate-400 font-medium flex-wrap">
-                        {% if not doc.is_legacy %}
+                        {% if not doc.is_legacy and doc.author_name %}
                         <span>
                             <i class="fas fa-user mr-1.5"></i>
-                            {% if doc.author.councilor_profile %}{{ doc.author.councilor_profile.name }}
-                            {% else %}Hon. {{ doc.author.last_name }}{% endif %}
+                            {{ doc.author_name }}
                         </span>
                         {% endif %}
-                        {% if doc.referred_committee %}
+                        {% if doc.committee_name %}
                         <span>
                             <i class="fas fa-users mr-1.5"></i>
-                            Committee on {{ doc.referred_committee.name }}
+                            Committee on {{ doc.committee_name }}
                         </span>
                         {% endif %}
                         <span>
                             <i class="fas fa-calendar mr-1.5"></i>
                             {{ doc.updated_at|date:"F d, Y" }}
                         </span>
-                        {% if doc.public_participation_open %}
+                        {% if doc.status == 'PUBLIC_PARTICIPATION_OPEN' %}
                         <span class="px-2 py-0.5 rounded-full text-[10px] font-bold" style="background: #e8faf0; color: #1a7a4a;">
                             <i class="fas fa-comments mr-1"></i> Public comment open
                         </span>

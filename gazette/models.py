@@ -21,40 +21,59 @@ class Users(models.Model):
 
 class Document(models.Model):
     """
-    SHADOW MODEL: Matches the 'documents_document' table in LePMITS.
-    We only define the fields we actually want to show on the website.
+    OWNED MODEL: populated by LePMITS's push-sync (see gazette_sync docs on
+    the LePMITS side), not read live from LePMITS's shared DB.
+
+    `source_id` (not the local auto `id`) is LePMITS's own document id —
+    the sync ingest endpoint upserts on it, and /document/<id>/ URLs
+    resolve against it, so existing links keep working. Kept separate from
+    the local PK rather than repurposing `id` itself, so this never has to
+    touch (or risk breaking) PublicComment's existing FK to this table.
+
+    `status` is one of three values LePMITS actually sends — "APPROVED",
+    "PUBLIC_PARTICIPATION_OPEN", or "PUBLIC_PARTICIPATION_CLOSED" — never
+    an internal workflow status like REFERRED/COMMITTEE/SECOND_READING;
+    LePMITS translates those down to whichever of the three applies before
+    sending. Public commenting is gated on
+    `status == 'PUBLIC_PARTICIPATION_OPEN'` directly rather than a
+    separate boolean, so there's exactly one field that can go out of
+    sync with reality.
     """
-    author = models.ForeignKey(Users, on_delete=models.DO_NOTHING, db_column='author_id')
+    source_id = models.IntegerField(unique=True, db_index=True)
+
+    # Denormalized display strings — the sync payload doesn't (yet) include
+    # a way to resolve these to real Users/Committee records, since those
+    # only exist in LePMITS's own DB. Blank until the contract is extended.
+    author_name = models.CharField(max_length=200, blank=True, default='')
+    committee_name = models.CharField(max_length=255, blank=True, default='')
+
     title = models.TextField()
     reference_no = models.CharField(max_length=100)
-    content = models.TextField()
     doc_type = models.CharField(max_length=20)
-    status = models.CharField(max_length=20)
-    created_at = models.DateTimeField()
+    category = models.CharField(max_length=100, blank=True, default='')
+    status = models.CharField(max_length=30)
     updated_at = models.DateTimeField(auto_now=True)
-    public_participation = models.BooleanField(default=False)
-    referred_committee = models.ForeignKey('councilors.Committee', on_delete=models.DO_NOTHING, db_column='referred_committee_id')
+
+    # Kept for forward-compatibility with a possible pre-approval sync path
+    # sending live draft text — always blank in practice today, since a
+    # synced row already has approved_pdf or pp_pdf by definition.
+    content = models.TextField(blank=True, default='')
 
     # LePMITS's own LibreOffice-rendered PDF for this document, captured at
     # Third Reading (or as a fallback at approval) — see approved_pdf_url.
-    # Not populated for documents approved before this field existed, so
-    # templates must fall back to rendering `content` when this is empty.
     approved_pdf = models.CharField(max_length=255, blank=True, null=True)
 
     # Snapshot captured at the moment public participation opens on a still-
-    # editable (not yet approved) document — see pp_pdf_url. Frozen at
-    # open time (re-captured fresh on a later reopen), so it can go stale
-    # relative to `content` if staff amend the draft while PP stays open;
-    # that's deliberate, not a bug. Gate visibility on this being non-empty
-    # or on public_participation, never on status (unlike approved_pdf,
-    # this can be set on a document that's still REFERRED/COMMITTEE).
+    # editable (not yet approved) document — see pp_pdf_url. Currently never
+    # populated (no sync trigger covers this stage yet); kept so the field
+    # exists once that gap is closed rather than needing a later migration.
     pp_pdf = models.CharField(max_length=255, blank=True, null=True)
 
     is_legacy = False
 
     class Meta:
-        managed = False
-        db_table = 'documents_document'
+        managed = True
+        db_table = 'gazette_document'
 
     def __str__(self):
         return self.title
@@ -79,45 +98,45 @@ class Document(models.Model):
 
     def get_absolute_url(self):
         from django.urls import reverse
-        return reverse('gazette_document', args=[self.id])
+        return reverse('gazette_document', args=[self.source_id])
 
 
 class LegacyDocument(models.Model):
     """
-    SHADOW MODEL: Matches the 'documents_legacydocument' table in LePMITS.
-    Already-passed bills (pre-system or scanned) uploaded directly by staff.
-    No status/workflow field — every row is a permanent, public record.
+    OWNED MODEL: populated by LePMITS's push-sync, not read live from
+    LePMITS's shared DB — see Document's docstring for the same rationale
+    on `source_id` vs the local `id`. Only ever populated once a document
+    has cleared signature-redaction review (public_pdf_file non-empty);
+    the ingest endpoint should reject/ignore anything sent before that.
     """
+    source_id = models.IntegerField(unique=True, db_index=True)
+
     title = models.TextField()
     reference_no = models.CharField(max_length=100)
     doc_type = models.CharField(max_length=20)
+    category = models.CharField(max_length=100, blank=True, default='')
     year = models.IntegerField(null=True, blank=True)
-    # The original scan (pdf_file, unredacted) is intentionally NOT mapped
-    # here — it contains real signatures and must never reach the public
-    # site. Only the redacted copy, once staff have confirmed it, is safe
-    # to display. Gate on public_pdf_file's presence; never fall back to
-    # the raw scan.
+    updated_at = models.DateTimeField(auto_now=True)
+
+    # The original scan (pdf_file, unredacted) is intentionally never
+    # mapped here — it contains real signatures and must never reach the
+    # public site. Only the redacted copy, once staff have confirmed it,
+    # is safe to display. Gate on public_pdf_file's presence; there is no
+    # raw-scan fallback.
     public_pdf_file = models.CharField(max_length=255, blank=True, null=True)
-    extracted_text = models.TextField(blank=True)
-    ocr_processed = models.BooleanField(default=False)
-    uploaded_at = models.DateTimeField()
 
     is_legacy = True
 
     class Meta:
-        managed = False
-        db_table = 'documents_legacydocument'
+        managed = True
+        db_table = 'gazette_legacydocument'
 
     def __str__(self):
         return self.title
 
     @property
-    def updated_at(self):
-        return self.uploaded_at
-
-    @property
     def display_year(self):
-        return self.year or self.uploaded_at.year
+        return self.year or self.updated_at.year
 
     @property
     def public_pdf_url(self):
@@ -128,7 +147,7 @@ class LegacyDocument(models.Model):
 
     def get_absolute_url(self):
         from django.urls import reverse
-        return reverse('gazette_legacy_document', args=[self.id])
+        return reverse('gazette_legacy_document', args=[self.source_id])
 
 
 class Session(models.Model):

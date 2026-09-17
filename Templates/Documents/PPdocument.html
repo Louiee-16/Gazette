@@ -57,7 +57,7 @@
             <span>/</span>
             <span>{{ doc.doc_type|title }}</span>
             <span>/</span>
-            <span class="text-slate-600">{{ doc.reference_no|default:doc.id }}</span>
+            <span class="text-slate-600">{{ doc.reference_no|default:doc.source_id }}</span>
         </nav>
     </div>
 </div>
@@ -85,11 +85,10 @@
 
                 <div class="flex flex-wrap gap-4 text-sm text-slate-500 font-medium">
                     <span><i class="fas fa-user mr-1.5 text-slate-300"></i>
-                        {% if doc.author.councilor_profile %}{{ doc.author.councilor_profile.name }}
-                        {% else %}Hon. {{ doc.author.last_name }}{% endif %}
+                        {% if doc.author_name %}{{ doc.author_name }}{% else %}Author not available{% endif %}
                     </span>
-                    {% if doc.referred_committee %}
-                    <span><i class="fas fa-users mr-1.5 text-slate-300"></i>Committee on {{ doc.referred_committee.name }}</span>
+                    {% if doc.committee_name %}
+                    <span><i class="fas fa-users mr-1.5 text-slate-300"></i>Committee on {{ doc.committee_name }}</span>
                     {% endif %}
                     <span><i class="fas fa-calendar mr-1.5 text-slate-300"></i>{{ doc.updated_at|date:"F d, Y" }}</span>
                 </div>
@@ -100,9 +99,9 @@
                 <i class="fas fa-file-pdf text-rose-400 text-lg"></i>
                 <div class="flex-1">
                     <p class="text-xs font-bold text-slate-700">Official Document PDF</p>
-                    <p class="text-[10px] text-slate-400">{% if doc.reference_no %}{{ doc.reference_no }}{% else %}{{ doc.doc_type|title }} No. {{ doc.id }}{% endif %}</p>
+                    <p class="text-[10px] text-slate-400">{% if doc.reference_no %}{{ doc.reference_no }}{% else %}{{ doc.doc_type|title }} No. {{ doc.source_id }}{% endif %}</p>
                 </div>
-                <a href="{% url 'gazette_download' doc.id %}"
+                <a href="{% url 'gazette_download' doc.source_id %}"
                     class="px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-widest text-white transition-all hover:opacity-90"
                     style="background: var(--navy);">
                     <i class="fas fa-download mr-1.5"></i> Download
@@ -142,14 +141,14 @@
                     </h2>
                 </div>
 
-                {% if doc.public_participation %}
+                {% if doc.status == 'PUBLIC_PARTICIPATION_OPEN' %}
                 <!-- Comment Form (YouTube Style) -->
                 <div class="flex gap-4 mb-12">
                     <div class="w-10 h-10 rounded-full bg-slate-200 flex items-center justify-center text-slate-500 font-bold shrink-0">
                         <i class="fas fa-user"></i>
                     </div>
                     <div class="flex-1">
-                        <form method="POST" action="{% url 'gazette_submit_comment' doc.id %}" class="space-y-4">
+                        <form method="POST" action="{% url 'gazette_submit_comment' doc.source_id %}" class="space-y-4">
                             {% csrf_token %}
                             <div class="comment-input-line" >
                                 <textarea name="comment" required placeholder="Add a public comment..."
@@ -217,7 +216,7 @@
                                 
                                 <!-- HIDDEN REPLY FORM (YouTube Style) -->
                                 <div id="reply-form-{{ comment.id }}" class="hidden mt-4">
-                                    <form method="POST" action="{% url 'gazette_submit_comment' doc.id %}">
+                                    <form method="POST" action="{% url 'gazette_submit_comment' doc.source_id %}">
                                         {% csrf_token %}
                                         <!-- This hidden field tells your backend which comment is the parent -->
                                         <input type="hidden" name="parent_id" value="{{ comment.id }}">
@@ -291,7 +290,7 @@
                                         
                                         <!-- HIDDEN REPLY FORM (YouTube Style) -->
                                         <div id="reply-form-{{ comment.id }}" class="hidden mt-4">
-                                            <form method="POST" action="{% url 'gazette_submit_comment' doc.id %}">
+                                            <form method="POST" action="{% url 'gazette_submit_comment' doc.source_id %}">
                                                 {% csrf_token %}
                                                 <!-- This hidden field tells your backend which comment is the parent -->
                                                 <input type="hidden" name="parent_id" value="{{ comment.id }}">
@@ -362,7 +361,7 @@
                 <div class="mt-4 pt-4 border-t border-slate-50 space-y-3 text-[11px]">
                     <div class="flex justify-between">
                         <span class="text-slate-400 font-medium">Reference No.</span>
-                        <span class="font-bold text-slate-700">{{ doc.reference_no|default:doc.id }}</span>
+                        <span class="font-bold text-slate-700">{{ doc.reference_no|default:doc.source_id }}</span>
                     </div>
                     <div class="flex justify-between">
                         <span class="text-slate-400 font-medium">Date Released</span>
@@ -374,7 +373,7 @@
             <!-- Quick Actions -->
             <!--<div class="bg-white rounded-2xl border border-slate-100 p-6 space-y-3 shadow-sm">
                 <h3 class="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-4">Tools</h3>
-                <a href="{% url 'gazette_download' doc.id %}"
+                <a href="{% url 'gazette_download' doc.source_id %}"
                     class="flex items-center justify-center gap-3 px-4 py-3 rounded-xl text-xs font-bold text-white transition-all w-full hover:opacity-90"
                     style="background: var(--navy);">
                     <i class="fas fa-download"></i> DOWNLOAD PDF
@@ -391,10 +390,10 @@
                 <h3 class="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-4">Related Measures</h3>
                 <div class="space-y-4">
                     {% for r in related %}
-                    <a href="{% url 'gazette_document' r.id %}" class="block group">
+                    <a href="{% url 'gazette_document' r.source_id %}" class="block group">
                         <p class="text-[9px] font-bold uppercase tracking-widest mb-1 group-hover:text-indigo-600 transition-colors"
                             style="color: {% if r.doc_type == 'ORDINANCE' %}var(--navy){% else %}#8a6820{% endif %};">
-                            {{ r.doc_type }} — {{ r.reference_no|default:r.id }}
+                            {{ r.doc_type }} — {{ r.reference_no|default:r.source_id }}
                         </p>
                         <p class="text-xs text-slate-600 leading-snug font-medium line-clamp-2 italic">{{ r.title }}</p>
                     </a>

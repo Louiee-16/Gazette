@@ -45,7 +45,7 @@
             <span>/</span>
             <span>{{ doc.doc_type|title }}</span>
             <span>/</span>
-            <span class="text-slate-600">{{ doc.reference_no|default:doc.id }}</span>
+            <span class="text-slate-600">{{ doc.reference_no|default:doc.source_id }}</span>
         </nav>
     </div>
 </div>
@@ -59,7 +59,7 @@
                 style="background: {% if doc.doc_type == 'ORDINANCE' %}#e8f0fa{% else %}#f5e9c8{% endif %}; color: {% if doc.doc_type == 'ORDINANCE' %}var(--navy){% else %}#8a6820{% endif %};">
                 {{ doc.doc_type }}
             </span>
-            <span class="text-[11px] font-bold text-slate-400 uppercase tracking-widest">No. {{ doc.reference_no|default:doc.id }}</span>
+            <span class="text-[11px] font-bold text-slate-400 uppercase tracking-widest">No. {{ doc.reference_no|default:doc.source_id }}</span>
         </div>
         <h1 class="serif text-3xl md:text-4xl font-bold text-slate-900 leading-tight mb-6 text-justify">
             {{ doc.title }}
@@ -127,7 +127,7 @@
             {% for r in related %}
             <a href="{{ r.get_absolute_url }}" class="bg-white p-6 rounded-2xl border border-slate-100 hover:shadow-lg transition-all group">
                 <p class="text-[9px] font-bold uppercase tracking-widest mb-2" style="color: var(--navy);">
-                    {{ r.doc_type }} {{ r.reference_no|default:r.id }}
+                    {{ r.doc_type }} {{ r.reference_no|default:r.source_id }}
                 </p>
                 <p class="text-[13px] text-slate-600 leading-snug font-medium line-clamp-2 group-hover:text-slate-900">{{ r.title }}</p>
             </a>

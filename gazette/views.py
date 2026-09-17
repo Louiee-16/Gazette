@@ -33,8 +33,7 @@ def gazette_index(request):
         )
         legacy_docs = legacy_docs.filter(
             Q(title__icontains=search_query) |
-            Q(reference_no__icontains=search_query) |
-            Q(extracted_text__icontains=search_query)
+            Q(reference_no__icontains=search_query)
         )
     if type_filter and type_filter != 'ALL':
         docs = docs.filter(doc_type=type_filter)
@@ -74,20 +73,32 @@ def gazette_index(request):
         'available_years': available_years,
     })
  
- 
+
+def _related_documents(doc):
+    """Same committee or same author, excluding current. author_name/
+    committee_name are often blank under the current sync contract, so an
+    empty criterion is skipped rather than matching every blank-field
+    document as "related"."""
+    criteria = Q()
+    has_criteria = False
+    if doc.committee_name:
+        criteria |= Q(committee_name=doc.committee_name)
+        has_criteria = True
+    if doc.author_name:
+        criteria |= Q(author_name=doc.author_name)
+        has_criteria = True
+    if not has_criteria:
+        return Document.objects.none()
+    return Document.objects.filter(status='APPROVED').exclude(id=doc.id).filter(criteria).distinct()[:4]
+
+
 def public_participation_document(request, doc_id):
     """Individual document page with full text and comments."""
-    doc = get_object_or_404(Document, id=doc_id)
+    doc = get_object_or_404(Document, source_id=doc_id)
     comments = PublicComment.objects.filter(document=doc, tag="comment", is_approved=True)
     replies = PublicComment.objects.filter(document=doc.id, tag="reply", is_approved=True)
 
-    # Related documents — same committee or same author, excluding current
-    related = Document.objects.filter(
-        status='APPROVED'
-    ).exclude(id=doc.id).filter(
-        Q(referred_committee=doc.referred_committee) |
-        Q(author=doc.author)
-    ).distinct()[:4]
+    related = _related_documents(doc)
 
     comment_submitted = request.GET.get('submitted') == '1'
 
@@ -102,17 +113,11 @@ def public_participation_document(request, doc_id):
  
 def gazette_document(request, doc_id):
     """Individual document page with full text and comments."""
-    doc = get_object_or_404(Document, id=doc_id)
+    doc = get_object_or_404(Document, source_id=doc_id)
     comments = PublicComment.objects.filter(document=doc, tag="comment", is_approved=True)
     replies = PublicComment.objects.filter(document=doc.id, tag="reply", is_approved=True)
 
-    # Related documents — same committee or same author, excluding current
-    related = Document.objects.filter(
-        status='APPROVED'
-    ).exclude(id=doc.id).filter(
-        Q(referred_committee=doc.referred_committee) |
-        Q(author=doc.author)
-    ).distinct()[:4]
+    related = _related_documents(doc)
 
     comment_submitted = request.GET.get('submitted') == '1'
 
@@ -129,7 +134,7 @@ def gazette_document(request, doc_id):
 def gazette_legacy_document(request, doc_id):
     """Detail page for an archived legacy bill (pre-system or scanned copy)."""
     reviewed = LegacyDocument.objects.exclude(public_pdf_file__isnull=True).exclude(public_pdf_file='')
-    doc = get_object_or_404(reviewed, id=doc_id)
+    doc = get_object_or_404(reviewed, source_id=doc_id)
 
     related = reviewed.filter(doc_type=doc.doc_type).exclude(id=doc.id)[:4]
 
@@ -141,12 +146,12 @@ def gazette_legacy_document(request, doc_id):
 
 def gazette_submit_comment(request, doc_id):
     """Handle public comment submission."""
-    doc = get_object_or_404(Document, id=doc_id)
+    doc = get_object_or_404(Document, source_id=doc_id)
  
     if request.method != 'POST':
         return redirect('gazette_document', doc_id=doc_id)
  
-    if not doc.public_participation:
+    if doc.status != 'PUBLIC_PARTICIPATION_OPEN':
         messages.error(request, 'Public comment is closed for this measure.')
         return redirect('gazette_document', doc_id=doc_id)
  
@@ -183,7 +188,7 @@ def gazette_submit_comment(request, doc_id):
  
 def gazette_download(request, doc_id):
     """Download document as PDF."""
-    doc = get_object_or_404(Document, id=doc_id, status='APPROVED')
+    doc = get_object_or_404(Document, source_id=doc_id, status='APPROVED')
     html_string = render_to_string('documents/document_pdf.html', {'doc': doc})
  
     try:
@@ -197,7 +202,7 @@ def gazette_download(request, doc_id):
         pisa.CreatePDF(html_string, dest=buffer)
         buffer.seek(0)
  
-        filename = f"{doc.doc_type}-{doc.reference_no or doc.id}-{doc.updated_at.year}.pdf"
+        filename = f"{doc.doc_type}-{doc.reference_no or doc.source_id}-{doc.updated_at.year}.pdf"
         response = HttpResponse(buffer.read(), content_type='application/pdf')
         response['Content-Disposition'] = f'attachment; filename="{filename}"'
         return response
@@ -208,8 +213,7 @@ def gazette_download(request, doc_id):
  
 def gazette_hearings(request):
 
-    open_docs = Document.objects.filter(
-        public_participation=True, status='REFERRED').order_by('-updated_at')
+    open_docs = Document.objects.filter(status='PUBLIC_PARTICIPATION_OPEN').order_by('-updated_at')
  
     upcoming_sessions = Session.objects.filter(
         session_date__gte=timezone.now().date()
