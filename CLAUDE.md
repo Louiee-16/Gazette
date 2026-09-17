@@ -12,7 +12,7 @@ A Django 6 app ("Gazette") that is a **public-facing read companion** to a separ
 # Activate the existing venv (Windows)
 venv\Scripts\Activate.ps1
 
-# Install deps (see "requirements.txt encoding" gotcha below)
+# Install deps
 pip install -r requirements.txt
 
 # Run the dev server
@@ -65,7 +65,6 @@ Templates live in a top-level `Templates/` directory (capitalized, not the Djang
 
 ## Known gotchas
 
-- `requirements.txt` is saved as **UTF-16** (with BOM), not UTF-8 — if editing it by hand, preserve that encoding or `pip install -r` may fail to parse it.
 - `gazette_download` (PDF export) imports `xhtml2pdf` lazily inside the view and catches `ImportError` to return a 500 with a plain message — `xhtml2pdf` is not in `requirements.txt`, so PDF download is expected to be unavailable unless it's installed separately.
 - `config/settings.py` has `DEBUG = True`, `ALLOWED_HOSTS = ['*']`, and hardcoded DB credentials — this is dev-only configuration, not hardened for production.
 - The `councilors` app's `admin.py`/`views.py` are still empty boilerplate (no URLs wired up); its models are currently only consumed from `gazette` (e.g. `Document.referred_committee` → `councilors.Committee`).
