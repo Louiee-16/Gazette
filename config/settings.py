@@ -157,6 +157,13 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 
+# Media files pushed by LePMITS's sync (approved/pp/redacted-legacy PDFs) —
+# Gazette now stores these itself rather than linking back to LePMITS's own
+# media server, since the whole point of the sync is to not depend on
+# reaching LePMITS's network once Gazette is hosted separately.
+MEDIA_URL = 'media/'
+MEDIA_ROOT = BASE_DIR / 'media'
+
 
 TEMPLATES = [
     {
@@ -177,7 +184,10 @@ TEMPLATES = [
 CSRF_COOKIE_NAME = "csrftoken_gazette"
 SESSION_COOKIE_NAME = "sessionid_gazette"
 
-# LePMITS serves legacy-document PDFs from its own media storage; this app
-# only has DB access to LePMITS, not its filesystem, so links are built
-# against LePMITS's own host.
-LEPMITS_MEDIA_BASE_URL = 'http://localhost:1624/media/'
+# Shared secret authenticating LePMITS's push-sync requests to
+# gazette.sync_ingest (see gazette/sync.py). Deliberately no hardcoded
+# fallback and no fail-loud-at-startup check like DB_PASSWORD: the sync
+# endpoint should just fail closed (reject every request) if this is
+# unset, rather than the whole app refusing to start over a feature that
+# isn't wired up everywhere yet.
+GAZETTE_SYNC_SECRET = os.environ.get('GAZETTE_SYNC_SECRET', '')

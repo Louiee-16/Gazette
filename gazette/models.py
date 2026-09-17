@@ -1,5 +1,15 @@
-# gazette_app/models.py
 from django.db import models
+
+
+def _media_url(path):
+    """Build a URL for a file path stored by the sync ingest endpoint
+    (gazette/sync.py), served from Gazette's own MEDIA_URL — not
+    LePMITS's media server, which this app no longer depends on for these
+    files once they've been pushed."""
+    if not path:
+        return None
+    from django.conf import settings
+    return f"{settings.MEDIA_URL.rstrip('/')}/{path.lstrip('/')}"
 
 
 class Users(models.Model):
@@ -84,17 +94,11 @@ class Document(models.Model):
 
     @property
     def approved_pdf_url(self):
-        if not self.approved_pdf:
-            return None
-        from django.conf import settings
-        return f"{settings.LEPMITS_MEDIA_BASE_URL.rstrip('/')}/{self.approved_pdf.lstrip('/')}"
+        return _media_url(self.approved_pdf)
 
     @property
     def pp_pdf_url(self):
-        if not self.pp_pdf:
-            return None
-        from django.conf import settings
-        return f"{settings.LEPMITS_MEDIA_BASE_URL.rstrip('/')}/{self.pp_pdf.lstrip('/')}"
+        return _media_url(self.pp_pdf)
 
     def get_absolute_url(self):
         from django.urls import reverse
@@ -140,10 +144,7 @@ class LegacyDocument(models.Model):
 
     @property
     def public_pdf_url(self):
-        if not self.public_pdf_file:
-            return None
-        from django.conf import settings
-        return f"{settings.LEPMITS_MEDIA_BASE_URL.rstrip('/')}/{self.public_pdf_file.lstrip('/')}"
+        return _media_url(self.public_pdf_file)
 
     def get_absolute_url(self):
         from django.urls import reverse
