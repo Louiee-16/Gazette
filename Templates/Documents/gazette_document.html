@@ -90,7 +90,7 @@
             </span>
             <span class="text-[11px] font-bold text-slate-400 uppercase tracking-widest">{% if doc.reference_no %}{{ doc.reference_no }}{% else %}No. {{ doc.id }}{% endif %}</span>
         </div>
-        <h1 class="serif text-3xl md:text-4xl font-bold text-slate-900 leading-tight mb-6">
+        <h1 class="serif text-3xl md:text-4xl font-bold text-slate-900 leading-tight mb-6 text-justify">
             {{ doc.title }}
         </h1>
         
@@ -129,27 +129,15 @@
         <div class="approved-ribbon">Approved</div>
         
         <div class="px-8 md:px-16 py-16" style="font-family: 'EB Garamond', Georgia, serif;">
-            
-            <!-- Letterhead -->
-            <div class="text-center mb-10">
-                <p class="text-[11px] text-slate-500 uppercase tracking-widest mb-1">Republic of the Philippines</p>
-                <p class="text-[15px] font-bold text-slate-800 uppercase tracking-tight">City of San Juan, Metro Manila</p>
-                <p class="text-[11px] text-slate-500">Office of the Sangguniang Panlungsod</p>
-                <div class="w-16 h-px bg-slate-200 mx-auto mt-6"></div>
-            </div>
 
-            <!-- Ordinance Identification -->
-            <div class="text-center mb-12">
-                <p class="text-[14px] font-black uppercase tracking-widest text-slate-900">
-                    {% if doc.reference_no %}{{ doc.reference_no }}{% else %}{{ doc.doc_type }} No. {{ doc.id }}{% endif %}
-                </p>
-                <p class="text-[11px] text-slate-500 mt-1 uppercase">Series of {{ doc.updated_at|date:"Y" }}</p>
-            </div>
+            <!-- No template-generated letterhead/identification here: the
+                 authored content (and the embedded PDF, when present)
+                 already includes its own — showing both duplicated it. -->
 
             <!-- Main Content -->
             {% if doc.approved_pdf %}
             <iframe src="{{ doc.approved_pdf_url }}#zoom=page-width"
-                style="width:100%; height:80vh; border:none; display:block;"
+                style="width:100%; height:112vh; border:none; display:block;"
                 class="rounded-xl border border-slate-100"></iframe>
             {% else %}
             <div class="ql-editor doc-body" style="position: static; white-space: normal; padding: 0;">

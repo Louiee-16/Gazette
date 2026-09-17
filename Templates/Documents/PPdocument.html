@@ -81,7 +81,7 @@
                     <span class="text-[11px] text-slate-300">Series of {{ doc.updated_at|date:"Y" }}</span>
                 </div>
 
-                <h1 class="serif text-3xl font-bold text-slate-900 leading-tight mb-4">{{ doc.title }}</h1>
+                <h1 class="serif text-3xl font-bold text-slate-900 leading-tight mb-4 text-justify">{{ doc.title }}</h1>
 
                 <div class="flex flex-wrap gap-4 text-sm text-slate-500 font-medium">
                     <span><i class="fas fa-user mr-1.5 text-slate-300"></i>
@@ -112,22 +112,19 @@
             <!-- THE OFFICIAL PAPER DOCUMENT -->
             <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden mb-12">
                 <div class="px-12 py-12" style="font-family: 'EB Garamond', Georgia, serif;">
-                    <div class="text-center mb-8">
-                        <p class="text-[11px] text-slate-500 uppercase tracking-tighter">Republic of the Philippines</p>
-                        <p class="text-[14px] font-bold text-slate-700 uppercase">City of San Juan, Metro Manila</p>
-                        <p class="text-[11px] text-slate-500">Office of the Sangguniang Panlungsod</p>
-                    </div>
 
-                    <div class="border-t border-b border-slate-300 py-4 text-center mb-10">
-                        <p class="text-[14px] font-black uppercase tracking-wide text-slate-900">
-                            {% if doc.reference_no %}{{ doc.reference_no }}{% else %}{{ doc.doc_type }} No. {{ doc.id }}{% endif %}
-                        </p>
-                        <p class="text-[11px] text-slate-500 mt-1">Series of {{ doc.updated_at|date:"Y" }}</p>
-                    </div>
+                    <!-- No template-generated letterhead/identification here:
+                         the authored content (and the embedded PDF, when
+                         present) already includes its own — showing both
+                         duplicated it. -->
 
                     {% if doc.approved_pdf %}
                     <iframe src="{{ doc.approved_pdf_url }}#zoom=page-width"
-                        style="width:100%; height:80vh; border:none; display:block;"
+                        style="width:100%; height:112vh; border:none; display:block;"
+                        class="rounded-xl border border-slate-100"></iframe>
+                    {% elif doc.pp_pdf %}
+                    <iframe src="{{ doc.pp_pdf_url }}#zoom=page-width"
+                        style="width:100%; height:112vh; border:none; display:block;"
                         class="rounded-xl border border-slate-100"></iframe>
                     {% else %}
                     <div class="ql-editor doc-body" style="position: static; white-space: normal; padding: 0; font-size: 15px; line-height: 1.8; color: #1a1a1a;">

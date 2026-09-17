@@ -41,6 +41,15 @@ class Document(models.Model):
     # templates must fall back to rendering `content` when this is empty.
     approved_pdf = models.CharField(max_length=255, blank=True, null=True)
 
+    # Snapshot captured at the moment public participation opens on a still-
+    # editable (not yet approved) document — see pp_pdf_url. Frozen at
+    # open time (re-captured fresh on a later reopen), so it can go stale
+    # relative to `content` if staff amend the draft while PP stays open;
+    # that's deliberate, not a bug. Gate visibility on this being non-empty
+    # or on public_participation, never on status (unlike approved_pdf,
+    # this can be set on a document that's still REFERRED/COMMITTEE).
+    pp_pdf = models.CharField(max_length=255, blank=True, null=True)
+
     is_legacy = False
 
     class Meta:
@@ -61,6 +70,13 @@ class Document(models.Model):
         from django.conf import settings
         return f"{settings.LEPMITS_MEDIA_BASE_URL.rstrip('/')}/{self.approved_pdf.lstrip('/')}"
 
+    @property
+    def pp_pdf_url(self):
+        if not self.pp_pdf:
+            return None
+        from django.conf import settings
+        return f"{settings.LEPMITS_MEDIA_BASE_URL.rstrip('/')}/{self.pp_pdf.lstrip('/')}"
+
     def get_absolute_url(self):
         from django.urls import reverse
         return reverse('gazette_document', args=[self.id])
@@ -76,7 +92,12 @@ class LegacyDocument(models.Model):
     reference_no = models.CharField(max_length=100)
     doc_type = models.CharField(max_length=20)
     year = models.IntegerField(null=True, blank=True)
-    pdf_file = models.CharField(max_length=255)
+    # The original scan (pdf_file, unredacted) is intentionally NOT mapped
+    # here — it contains real signatures and must never reach the public
+    # site. Only the redacted copy, once staff have confirmed it, is safe
+    # to display. Gate on public_pdf_file's presence; never fall back to
+    # the raw scan.
+    public_pdf_file = models.CharField(max_length=255, blank=True, null=True)
     extracted_text = models.TextField(blank=True)
     ocr_processed = models.BooleanField(default=False)
     uploaded_at = models.DateTimeField()
@@ -99,9 +120,11 @@ class LegacyDocument(models.Model):
         return self.year or self.uploaded_at.year
 
     @property
-    def pdf_url(self):
+    def public_pdf_url(self):
+        if not self.public_pdf_file:
+            return None
         from django.conf import settings
-        return f"{settings.LEPMITS_MEDIA_BASE_URL.rstrip('/')}/{self.pdf_file.lstrip('/')}"
+        return f"{settings.LEPMITS_MEDIA_BASE_URL.rstrip('/')}/{self.public_pdf_file.lstrip('/')}"
 
     def get_absolute_url(self):
         from django.urls import reverse

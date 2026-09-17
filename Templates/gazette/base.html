@@ -67,10 +67,10 @@
 
             <!-- Nav -->
             <nav class="flex items-center gap-8">
-                <a href="{% url 'gazette_index' %}" class="nav-link {% if request.resolver_match.url_name == 'gazette_index' %}active{% endif %}" style="color: rgba(255,255,255,0.6);">
+                <a href="{% url 'gazette_index' %}" class="nav-link {% if request.resolver_match.url_name == 'gazette_index' and request.GET.type != 'RESOLUTION' %}active{% endif %}" style="color: rgba(255,255,255,0.6);">
                     Ordinances
                 </a>
-                <a href="{% url 'gazette_index' %}?type=RESOLUTION" class="nav-link" style="color: rgba(255,255,255,0.6);">
+                <a href="{% url 'gazette_index' %}?type=RESOLUTION" class="nav-link {% if request.GET.type == 'RESOLUTION' %}active{% endif %}" style="color: rgba(255,255,255,0.6);">
                     Resolutions
                 </a>
                 <a href="{% url 'gazette_hearings' %}" class="nav-link {% if request.resolver_match.url_name == 'gazette_hearings' %}active{% endif %}" style="color: rgba(255,255,255,0.6);">

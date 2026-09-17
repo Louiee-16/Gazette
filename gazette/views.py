@@ -16,7 +16,9 @@ from .models import PublicComment
 def gazette_index(request):
     """Public index of all approved measures, plus archived legacy bills."""
     docs = Document.objects.filter(status='APPROVED')
-    legacy_docs = LegacyDocument.objects.all()
+    # Only show legacy scans that have cleared signature-redaction review —
+    # public_pdf_file is empty for anything still pending.
+    legacy_docs = LegacyDocument.objects.exclude(public_pdf_file__isnull=True).exclude(public_pdf_file='')
 
     # Filters
     search_query = request.GET.get('search', '').strip()
@@ -50,6 +52,7 @@ def gazette_index(request):
     )
     legacy_years = set(
         LegacyDocument.objects.exclude(year__isnull=True)
+        .exclude(public_pdf_file__isnull=True).exclude(public_pdf_file='')
         .values_list('year', flat=True)
         .distinct()
     )
@@ -125,9 +128,10 @@ def gazette_document(request, doc_id):
 
 def gazette_legacy_document(request, doc_id):
     """Detail page for an archived legacy bill (pre-system or scanned copy)."""
-    doc = get_object_or_404(LegacyDocument, id=doc_id)
+    reviewed = LegacyDocument.objects.exclude(public_pdf_file__isnull=True).exclude(public_pdf_file='')
+    doc = get_object_or_404(reviewed, id=doc_id)
 
-    related = LegacyDocument.objects.filter(doc_type=doc.doc_type).exclude(id=doc.id)[:4]
+    related = reviewed.filter(doc_type=doc.doc_type).exclude(id=doc.id)[:4]
 
     return render(request, 'Documents/legacy_document.html', {
         'doc': doc,
