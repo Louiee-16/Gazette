@@ -184,6 +184,15 @@ TEMPLATES = [
 CSRF_COOKIE_NAME = "csrftoken_gazette"
 SESSION_COOKIE_NAME = "sessionid_gazette"
 
+# Django's default (DENY) blocks Gazette's own document pages from
+# framing their own embedded PDF (served from MEDIA_URL) — this applies
+# site-wide via XFrameOptionsMiddleware, including to the built-in
+# static-file-serving view used for MEDIA_URL, which isn't something a
+# view-level decorator can easily reach. SAMEORIGIN keeps the actual
+# protection DENY exists for (other sites can't frame Gazette) while
+# allowing Gazette to frame its own content.
+X_FRAME_OPTIONS = 'SAMEORIGIN'
+
 # Shared secret authenticating LePMITS's push-sync requests to
 # gazette.sync_ingest (see gazette/sync.py). Deliberately no hardcoded
 # fallback and no fail-loud-at-startup check like DB_PASSWORD: the sync
